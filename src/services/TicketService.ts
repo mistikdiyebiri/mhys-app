@@ -6,24 +6,39 @@ import {
   createMockTickets,
   createMockTicketComments,
   TicketStatus,
-  TicketPriority
+  TicketPriority,
+  TicketsResponse,
+  TicketResponse,
+  CommentsResponse,
+  CommentResponse
 } from '../models/Ticket';
 import { get, post, put } from 'aws-amplify/api';
 
 class TicketService {
+  private static instance: TicketService;
+  private readonly apiGateway: any;
+  private readonly isProduction: boolean;
   private tickets: Ticket[] = [];
   private comments: TicketComment[] = [];
-  private isProduction: boolean;
   private apiName = 'tickets'; // Amplify API'deki API ismi
 
-  constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
+  private constructor() {
+    this.apiGateway = null; // AWS API Gateway instance would be initialized here
+    // Geliştirme modunda olduğumuzu varsayalım
+    this.isProduction = false; // Geliştirme modunda çalış
     
     // Geliştirme modunda mock veriler kullan
     if (!this.isProduction) {
       this.tickets = createMockTickets();
       this.comments = createMockTicketComments();
     }
+  }
+
+  static getInstance(): TicketService {
+    if (!TicketService.instance) {
+      TicketService.instance = new TicketService();
+    }
+    return TicketService.instance;
   }
 
   // Tüm biletleri al
@@ -36,7 +51,11 @@ class TicketService {
           path: '/tickets'
         }).response;
         const data = await response.body.json();
-        return data?.tickets || [];
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'tickets' in data && Array.isArray(data.tickets)) {
+          return data.tickets as any as Ticket[];
+        }
+        return [];
       } catch (error: any) {
         console.error('Biletler çekilirken hata oluştu:', error);
         throw error;
@@ -61,7 +80,11 @@ class TicketService {
           path: `/users/${userId}/tickets`
         }).response;
         const data = await response.body.json();
-        return data?.tickets || [];
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'tickets' in data && Array.isArray(data.tickets)) {
+          return data.tickets as any as Ticket[];
+        }
+        return [];
       } catch (error: any) {
         console.error(`${userId} için biletler çekilirken hata oluştu:`, error);
         throw error;
@@ -87,7 +110,11 @@ class TicketService {
           path: `/tickets/${ticketId}`
         }).response;
         const data = await response.body.json();
-        return data?.ticket || null;
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'ticket' in data) {
+          return data.ticket as any as Ticket;
+        }
+        return null;
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet çekilirken hata oluştu:`, error);
         // 404 hatası durumunda null dön
@@ -119,11 +146,15 @@ class TicketService {
             body: {
               ...request,
               createdBy: userId
-            }
+            } as any
           }
         }).response;
         const data = await response.body.json();
-        return data?.ticket || null;
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'ticket' in data) {
+          return data.ticket as any as Ticket;
+        }
+        throw new Error('Bilet oluşturma işlemi başarısız oldu.');
       } catch (error: any) {
         console.error('Bilet oluşturulurken hata oluştu:', error);
         throw error;
@@ -165,11 +196,15 @@ class TicketService {
           apiName: this.apiName,
           path: `/tickets/${ticketId}`,
           options: {
-            body: request
+            body: request as any
           }
         }).response;
         const data = await response.body.json();
-        return data?.ticket || null;
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'ticket' in data) {
+          return data.ticket as any as Ticket;
+        }
+        return null;
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet güncellenirken hata oluştu:`, error);
         // 404 hatası durumunda null dön
@@ -222,7 +257,11 @@ class TicketService {
           }
         }).response;
         const data = await response.body.json();
-        return data?.comments || [];
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'comments' in data && Array.isArray(data.comments)) {
+          return data.comments as any as TicketComment[];
+        }
+        return [];
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet için yorumlar çekilirken hata oluştu:`, error);
         throw error;
@@ -258,11 +297,15 @@ class TicketService {
               createdBy: userId,
               isInternal,
               attachments
-            }
+            } as any
           }
         }).response;
         const data = await response.body.json();
-        return data?.comment || null;
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'comment' in data) {
+          return data.comment as any as TicketComment;
+        }
+        throw new Error('Yorum ekleme işlemi başarısız oldu.');
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilete yorum eklenirken hata oluştu:`, error);
         throw error;
@@ -353,7 +396,11 @@ class TicketService {
         }).response;
         
         const data = await response.body.json();
-        return data?.tickets || [];
+        // Tip güvenliği için kontrol
+        if (data && typeof data === 'object' && 'tickets' in data && Array.isArray(data.tickets)) {
+          return data.tickets as any as Ticket[];
+        }
+        return [];
       } catch (error: any) {
         console.error('Biletler filtrelenirken hata oluştu:', error);
         throw error;
@@ -407,5 +454,5 @@ class TicketService {
 }
 
 // Singleton servis örneği
-const ticketService = new TicketService();
-export default ticketService; 
+const ticketService = TicketService.getInstance();
+export default ticketService;
