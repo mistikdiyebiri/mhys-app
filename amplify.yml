@@ -1,3 +1,4 @@
+# Amplify Console build settings
 version: 1
 backend:
   phases:
@@ -8,7 +9,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm ci
     build:
       commands:
         - npm run build
