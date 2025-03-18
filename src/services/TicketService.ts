@@ -36,7 +36,7 @@ class TicketService {
           path: '/tickets'
         }).response;
         const data = await response.body.json();
-        return data.tickets;
+        return data?.tickets || [];
       } catch (error: any) {
         console.error('Biletler çekilirken hata oluştu:', error);
         throw error;
@@ -61,7 +61,7 @@ class TicketService {
           path: `/users/${userId}/tickets`
         }).response;
         const data = await response.body.json();
-        return data.tickets;
+        return data?.tickets || [];
       } catch (error: any) {
         console.error(`${userId} için biletler çekilirken hata oluştu:`, error);
         throw error;
@@ -87,7 +87,7 @@ class TicketService {
           path: `/tickets/${ticketId}`
         }).response;
         const data = await response.body.json();
-        return data.ticket;
+        return data?.ticket || null;
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet çekilirken hata oluştu:`, error);
         // 404 hatası durumunda null dön
@@ -123,7 +123,7 @@ class TicketService {
           }
         }).response;
         const data = await response.body.json();
-        return data.ticket;
+        return data?.ticket || null;
       } catch (error: any) {
         console.error('Bilet oluşturulurken hata oluştu:', error);
         throw error;
@@ -169,7 +169,7 @@ class TicketService {
           }
         }).response;
         const data = await response.body.json();
-        return data.ticket;
+        return data?.ticket || null;
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet güncellenirken hata oluştu:`, error);
         // 404 hatası durumunda null dön
@@ -222,7 +222,7 @@ class TicketService {
           }
         }).response;
         const data = await response.body.json();
-        return data.comments;
+        return data?.comments || [];
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilet için yorumlar çekilirken hata oluştu:`, error);
         throw error;
@@ -262,7 +262,7 @@ class TicketService {
           }
         }).response;
         const data = await response.body.json();
-        return data.comment;
+        return data?.comment || null;
       } catch (error: any) {
         console.error(`${ticketId} ID'li bilete yorum eklenirken hata oluştu:`, error);
         throw error;
@@ -353,7 +353,7 @@ class TicketService {
         }).response;
         
         const data = await response.body.json();
-        return data.tickets;
+        return data?.tickets || [];
       } catch (error: any) {
         console.error('Biletler filtrelenirken hata oluştu:', error);
         throw error;
