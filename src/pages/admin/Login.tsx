@@ -10,7 +10,9 @@ import {
   Grid,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Divider,
+  ButtonGroup
 } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 // signOut doğrudan AuthContext'ten kullanacağız
@@ -101,14 +103,34 @@ const AdminLogin: React.FC = () => {
     }
   };
 
-  // logout fonksiyonunu AuthContext'ten kullanacağız
-  // const logout = async () => {
-  //   try {
-  //     await signOut();
-  //   } catch (error) {
-  //     console.error('Çıkış yapılırken hata oluştu:', error);
-  //   }
-  // };
+  // Demo kullanıcıları için hızlı giriş fonksiyonları
+  const loginAsAdmin = async () => {
+    setLoading(true);
+    try {
+      await login('admin@mhys.com', 'Admin123!');
+      await checkUserRole();
+    } catch (error: any) {
+      console.error('Demo giriş hatası (Admin):', error);
+      setError(error.message || 'Demo giriş başarısız oldu');
+      setShowAlert(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAsStaff = async () => {
+    setLoading(true);
+    try {
+      await login('personel@mhys.com', 'Personel123!');
+      await checkUserRole();
+    } catch (error: any) {
+      console.error('Demo giriş hatası (Personel):', error);
+      setError(error.message || 'Demo giriş başarısız oldu');
+      setShowAlert(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -183,6 +205,35 @@ const AdminLogin: React.FC = () => {
             >
               {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
             </Button>
+            
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                VEYA
+              </Typography>
+            </Divider>
+            
+            <Typography variant="body2" align="center" sx={{ mb: 2 }}>
+              Demo Hesapları ile Giriş Yap
+            </Typography>
+            
+            <ButtonGroup fullWidth variant="outlined">
+              <Button 
+                onClick={loginAsAdmin}
+                disabled={loading}
+                color="primary"
+                sx={{ mt: 1 }}
+              >
+                Admin Demo
+              </Button>
+              <Button 
+                onClick={loginAsStaff}
+                disabled={loading}
+                color="secondary"
+                sx={{ mt: 1 }}
+              >
+                Personel Demo
+              </Button>
+            </ButtonGroup>
           </Box>
         </Paper>
         
