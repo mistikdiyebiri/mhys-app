@@ -73,6 +73,23 @@ export interface UpdateTicketRequest {
   tags?: string[];
 }
 
+// API Yanıt Tipleri
+export interface TicketsResponse {
+  tickets: Ticket[];
+}
+
+export interface TicketResponse {
+  ticket: Ticket;
+}
+
+export interface CommentsResponse {
+  comments: TicketComment[];
+}
+
+export interface CommentResponse {
+  comment: TicketComment;
+}
+
 // Mock bilet verisi oluşturma fonksiyonu
 export const createMockTickets = (): Ticket[] => {
   const now = new Date().toISOString();
