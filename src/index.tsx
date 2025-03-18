@@ -143,10 +143,23 @@ const mockAuth = {
 // Amplify yapılandırmasını yükle
 if (process.env.NODE_ENV === 'production') {
   // Prodüksiyon ortamında gerçek Amplify konfigürasyonunu kullan
-  configureAmplify();
+  console.log('Prodüksiyon modunda AWS Amplify yapılandırılıyor...');
+  try {
+    configureAmplify();
+    console.log('Amplify yapılandırması başarılı!');
+  } catch (error) {
+    console.error('Amplify yapılandırma hatası:', error);
+  }
 } else {
   // Geliştirme ortamında mock konfigürasyonu kullan
-  Amplify.configure(awsExports);
+  console.log('Geliştirme modunda AWS Amplify (mock) yapılandırılıyor...');
+  try {
+    console.log('aws-exports içeriği:', JSON.stringify(awsExports, null, 2));
+    Amplify.configure(awsExports);
+    console.log('Amplify mock yapılandırması başarılı!');
+  } catch (error) {
+    console.error('Amplify mock yapılandırma hatası:', error);
+  }
 }
 
 // Global window nesnesine mock Auth metodlarını ekle
@@ -155,6 +168,16 @@ if (process.env.NODE_ENV === 'production') {
 window.mockAuthMethods = mockAuth;
 
 // AuthContext'de bu metodları kullanacağız
+
+// Hata yakalama için genel bir error handler ekleyelim
+window.addEventListener('error', (event) => {
+  console.error('Global error handler:', event.error);
+});
+
+// Yakalanmayan Promise hataları için handler
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled Promise rejection:', event.reason);
+});
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
