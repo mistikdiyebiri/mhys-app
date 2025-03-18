@@ -7,6 +7,8 @@ import reportWebVitals from './reportWebVitals';
 import { Amplify } from 'aws-amplify';
 // Auth'u artık farklı şekilde tanımlayacağız
 import awsExports from './aws-exports';
+// Kendi AWS Amplify konfigürasyonumuzu içeri aktaralım
+import configureAmplify from './amplify-config';
 // DatePicker için gerekli bileşenler
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -139,7 +141,13 @@ const mockAuth = {
 };
 
 // Amplify yapılandırmasını yükle
-Amplify.configure(awsExports);
+if (process.env.NODE_ENV === 'production') {
+  // Prodüksiyon ortamında gerçek Amplify konfigürasyonunu kullan
+  configureAmplify();
+} else {
+  // Geliştirme ortamında mock konfigürasyonu kullan
+  Amplify.configure(awsExports);
+}
 
 // Global window nesnesine mock Auth metodlarını ekle
 // Bu sayede tüm uygulamada bu metodlara erişilebilir

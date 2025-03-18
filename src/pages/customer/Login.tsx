@@ -44,7 +44,7 @@ const CustomerLogin: React.FC = () => {
       
       // Müşteri rolüne sahip kullanıcılar girebilir
       if (userRole && userRole === 'customer') {
-        navigate('/customer/dashboard');
+        navigate('/dashboard');
         return true;
       } else {
         // Rolü uygun değilse çıkış yap ve hata göster
@@ -243,4 +243,4 @@ const CustomerLogin: React.FC = () => {
   );
 };
 
-export default CustomerLogin; 
+export default CustomerLogin;

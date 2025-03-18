@@ -1,4 +1,9 @@
 version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - '# Backend build komutları - mock mod için gerekli değil'
 frontend:
   phases:
     preBuild:
@@ -13,4 +18,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/* 
+      - node_modules/**/*

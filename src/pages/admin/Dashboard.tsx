@@ -30,7 +30,12 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import SecurityIcon from '@mui/icons-material/Security';
+import ChatIcon from '@mui/icons-material/Chat';
 import { useAuth } from '../../contexts/AuthContext';
+import { PagePermission } from '../../models/Role';
+import PermissionGuard from '../../components/PermissionGuard';
 
 // Alt sayfalar (lazy-loaded)
 // @ts-ignore
@@ -45,14 +50,14 @@ const Reports = React.lazy(() => import('./Reports'));
 const Tickets = React.lazy(() => import('./Tickets'));
 // @ts-ignore
 const Settings = React.lazy(() => import('./Settings'));
+// @ts-ignore
+const GeminiSettings = React.lazy(() => import('./GeminiSettings'));
+// @ts-ignore
+const RolesManagement = React.lazy(() => import('./RolesManagement'));
+// @ts-ignore
+const QuickReplySettings = React.lazy(() => import('./QuickReplySettings'));
 
 const drawerWidth = 240;
-
-// Non-null tip için yardımcı fonksiyon
-const assertTheme = (theme?: Theme): Theme => {
-  if (!theme) throw new Error('Theme is undefined');
-  return theme;
-};
 
 const openedMixin = (theme: Theme) => ({
   width: drawerWidth,
@@ -128,7 +133,7 @@ const Dashboard: React.FC = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const { user, logout, getUserAttributes } = useAuth();
+  const { logout, getUserAttributes } = useAuth();
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
@@ -153,13 +158,17 @@ const Dashboard: React.FC = () => {
     fetchUserData();
   }, [getUserAttributes]);
 
+  // Menü öğeleri
   const menuItems = [
     { text: 'Genel Bakış', icon: <DashboardIcon />, path: '/admin/dashboard' },
     { text: 'Personeller', icon: <PeopleIcon />, path: '/admin/dashboard/employees' },
     { text: 'Departmanlar', icon: <BusinessIcon />, path: '/admin/dashboard/departments' },
     { text: 'Destek Talepleri', icon: <SupportAgentIcon />, path: '/admin/dashboard/tickets' },
     { text: 'Raporlar', icon: <BarChartIcon />, path: '/admin/dashboard/reports' },
+    { text: 'Hazır Yanıtlar', icon: <ChatIcon />, path: '/admin/dashboard/quickreplies' },
     { text: 'Ayarlar', icon: <SettingsIcon />, path: '/admin/dashboard/settings' },
+    { text: 'Gemini AI', icon: <SmartToyIcon />, path: '/admin/dashboard/gemini-settings' },
+    { text: 'Rol Yönetimi', icon: <SecurityIcon />, path: '/admin/dashboard/roles', permission: PagePermission.ROLE_VIEW },
   ];
 
   const handleDrawerOpen = () => {
@@ -276,47 +285,57 @@ const Dashboard: React.FC = () => {
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
-              <ListItemButton
-                component={Link}
-                to={item.path}
-                sx={{
-                  minHeight: 48,
-                  justifyContent: open ? 'initial' : 'center',
-                  px: 2.5,
-                  bgcolor: isActive(item.path) ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
-                  '&:hover': {
-                    bgcolor: 'rgba(0, 0, 0, 0.08)'
-                  }
-                }}
-              >
-                <ListItemIcon
+          {menuItems.map((item) => {
+            // İzin kontrolü yaparak menü öğesini göster
+            const menuItem = (
+              <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  component={Link}
+                  to={item.path}
                   sx={{
-                    minWidth: 0,
-                    mr: open ? 3 : 'auto',
-                    justifyContent: 'center',
-                    color: isActive(item.path) ? 'primary.main' : 'inherit'
+                    minHeight: 48,
+                    justifyContent: open ? 'initial' : 'center',
+                    px: 2.5,
+                    backgroundColor: isActive(item.path) ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  sx={{ 
-                    opacity: open ? 1 : 0,
-                    '& .MuiTypography-root': {
-                      fontWeight: isActive(item.path) ? 'bold' : 'normal',
-                      color: isActive(item.path) ? 'primary.main' : 'inherit'
-                    }
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: open ? 3 : 'auto',
+                      justifyContent: 'center',
+                      color: isActive(item.path) ? 'primary.main' : 'inherit',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    sx={{ 
+                      opacity: open ? 1 : 0,
+                      color: isActive(item.path) ? 'primary.main' : 'inherit', 
+                    }} 
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+            
+            // Eğer izin gerekiyorsa izin kontrolü yap
+            if (item.permission) {
+              return (
+                <PermissionGuard key={item.text} permission={item.permission}>
+                  {menuItem}
+                </PermissionGuard>
+              );
+            }
+            
+            // İzin gerekmiyorsa direkt göster
+            return menuItem;
+          })}
         </List>
       </DrawerStyled>
       
+      {/* Ana içerik */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <DrawerHeader />
         <React.Suspense fallback={<div>Yükleniyor...</div>}>
@@ -327,6 +346,16 @@ const Dashboard: React.FC = () => {
             <Route path="/tickets" element={<Tickets />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/gemini-settings" element={<GeminiSettings />} />
+            <Route path="/quickreplies" element={<QuickReplySettings />} />
+            <Route 
+              path="/roles" 
+              element={
+                <PermissionGuard permission={PagePermission.ROLE_VIEW}>
+                  <RolesManagement />
+                </PermissionGuard>
+              } 
+            />
           </Routes>
         </React.Suspense>
       </Box>

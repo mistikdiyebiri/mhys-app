@@ -1,77 +1,288 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import './App.css';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-// @ts-ignore
-import { AuthProvider } from './contexts/AuthContext';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { AuthProvider } from "./contexts/AuthContext";
 
-// Sayfa bileşenleri (lazy-loaded)
-// @ts-ignore
-const Home = React.lazy(() => import('./pages/Home'));
-// @ts-ignore
-const Login = React.lazy(() => import('./pages/Login'));
-// @ts-ignore
-const AdminLogin = React.lazy(() => import('./pages/admin/Login'));
-// @ts-ignore
-const AdminDashboard = React.lazy(() => import('./pages/admin/Dashboard'));
-// @ts-ignore
-const CustomerPortal = React.lazy(() => import('./pages/customer/Portal'));
+// Sayfalar
+import Home from "./pages/Home";
+import CustomerLogin from "./pages/customer/Login";
+import CustomerDashboard from "./pages/customer/Dashboard";
+import AdminLogin from "./pages/admin/Login";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminTickets from "./pages/admin/Tickets";
+import AdminEmployees from "./pages/admin/Employees";
+import AdminDepartments from "./pages/admin/Departments";
+import AdminReports from "./pages/admin/Reports";
+import AdminSettings from "./pages/admin/Settings";
+import GeminiSettings from "./pages/admin/GeminiSettings";
+import RolesManagement from "./pages/admin/RolesManagement";
+import QuickReplySettings from "./pages/admin/QuickReplySettings";
 
+// Bileşenler
+import ProtectedRoute from "./components/ProtectedRoute";
+import NotFound from "./components/NotFound";
+
+// Tema yapılandırması
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: "#2563eb",
+      light: "#3b82f6",
+      dark: "#1d4ed8",
     },
     secondary: {
-      main: '#f50057',
+      main: "#9333ea",
+      light: "#a855f7",
+      dark: "#7e22ce",
     },
-    mode: 'light',
+    error: {
+      main: "#ef4444",
+    },
+    warning: {
+      main: "#f59e0b",
+    },
+    info: {
+      main: "#06b6d4",
+    },
+    success: {
+      main: "#10b981",
+    },
+    background: {
+      default: "#f8fafc",
+      paper: "#ffffff",
+    },
+    text: {
+      primary: "#0f172a",
+      secondary: "#475569",
+    },
   },
   typography: {
-    fontFamily: [
-      'Roboto',
-      '"Helvetica Neue"',
-      'Arial',
-      'sans-serif',
-    ].join(','),
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 700,
+    },
+    h3: {
+      fontWeight: 600,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    subtitle1: {
+      fontWeight: 500,
+    },
+    button: {
+      fontWeight: 500,
+      textTransform: "none",
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          padding: "8px 16px",
+          boxShadow: "none",
+          "&:hover": {
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+          },
+        },
+        sizeLarge: {
+          padding: "10px 22px",
+        },
+        sizeSmall: {
+          padding: "6px 12px",
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+          overflow: "hidden",
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+        elevation1: {
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+        },
+        elevation2: {
+          boxShadow: "0 3px 6px rgba(0, 0, 0, 0.1)",
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+        },
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: "12px 16px",
+        },
+        head: {
+          fontWeight: 600,
+          backgroundColor: "#f8fafc",
+        },
+      },
+    },
   },
 });
 
-function App() {
+const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <Router>
-          <React.Suspense fallback={
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-              <p>Yükleniyor...</p>
-            </div>
-          }>
-            <Routes>
-              {/* Müşteri Sayfaları */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/portal/*" element={<CustomerPortal />} />
-              
-              {/* Admin ve Personel Sayfaları */}
-              <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
-              
-              {/* 404 Sayfası */}
-              <Route path="*" element={
-                <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-                  <h1>404 - Sayfa Bulunamadı</h1>
-                  <p>Aradığınız sayfa mevcut değil veya taşınmış olabilir.</p>
-                </div>
-              } />
-            </Routes>
-          </React.Suspense>
+          <Routes>
+            {/* Ana Sayfa */}
+            <Route path="/" element={<Home />} />
+
+            {/* Müşteri Sayfaları */}
+            <Route path="/login" element={<CustomerLogin />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute requiredRole="customer">
+                  <CustomerDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Sayfaları */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
+              path="/admin"
+              element={<Navigate to="/admin/login" replace />}
+            />
+            <Route
+              path="/admin/dashboard/*"
+              element={
+                <ProtectedRoute requiredRole="admin,employee">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tickets"
+              element={
+                <ProtectedRoute requiredRole="admin,employee">
+                  <AdminTickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminEmployees />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/departments"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDepartments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/reports"
+              element={
+                <ProtectedRoute requiredRole="admin,employee">
+                  <AdminReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/gemini-settings"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <GeminiSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/quickreplies"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <QuickReplySettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/roles"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <RolesManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 Sayfası */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </Router>
       </AuthProvider>
     </ThemeProvider>
   );
-}
+};
 
 export default App;

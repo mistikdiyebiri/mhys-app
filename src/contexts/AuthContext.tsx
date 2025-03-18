@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { PagePermission } from '../models/Role';
+import roleService from '../services/RoleService';
 
 // Mock Auth Types
 interface MockUserAttributes {
@@ -40,11 +42,13 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isAuthenticating: boolean;
   userRole: string | null;
+  userPermissions: PagePermission[];
   currentUser?: CognitoUser | null;
   signOut?: () => Promise<void>;
   login: (email: string, password: string) => Promise<CognitoUser>;
   logout: () => Promise<void>;
   getUserAttributes: () => Promise<UserAttributes>;
+  hasPermission: (permission: PagePermission) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,6 +70,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<PagePermission[]>([]);
+
+  // Kullanıcının izinlerini rol ID'sine göre yükle
+  const loadUserPermissions = (roleId: string) => {
+    if (roleId === 'admin') {
+      // Admin rolü tüm izinlere sahiptir
+      setUserPermissions(Object.values(PagePermission));
+    } else {
+      // Diğer roller için rol servisinden izinleri al
+      const permissions = roleService.getRolePermissions(roleId);
+      setUserPermissions(permissions);
+    }
+  };
 
   useEffect(() => {
     // Kullanıcının oturum durumunu kontrol et
@@ -80,11 +97,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userAttributes = await window.mockAuthMethods.fetchUserAttributes();
         const roleValue = userAttributes['custom:role'];
         setUserRole(roleValue || null);
+        
+        // Kullanıcının izinlerini yükle
+        if (roleValue) {
+          loadUserPermissions(roleValue);
+        }
       } catch (error) {
         // Hata durumunda kullanıcı bilgilerini temizle
         setUser(null);
         setIsAuthenticated(false);
         setUserRole(null);
+        setUserPermissions([]);
         console.log('Oturum kontrolü sırasında hata oluştu:', error);
       } finally {
         setIsAuthenticating(false);
@@ -112,6 +135,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const roleValue = userAttributes['custom:role'];
           setUserRole(roleValue || null);
           
+          // Kullanıcının izinlerini yükle
+          if (roleValue) {
+            loadUserPermissions(roleValue);
+          }
+          
           return currentUser;
         } catch (error) {
           console.error('Kullanıcı bilgileri alınırken hata:', error);
@@ -137,6 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setUserRole(null);
+      setUserPermissions([]);
     } catch (error) {
       console.error('Çıkış yapılırken hata oluştu:', error);
       throw error;
@@ -188,6 +217,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     throw new Error('Kullanıcı oturum açmamış');
   };
 
+  // Kullanıcının belirli bir izne sahip olup olmadığını kontrol et
+  const hasPermission = (permission: PagePermission): boolean => {
+    // Admin her zaman tüm izinlere sahiptir
+    if (userRole === 'admin') return true;
+    
+    // Diğer roller için izinleri kontrol et
+    return userPermissions.includes(permission);
+  };
+
   return (
     <AuthContext.Provider 
       value={{
@@ -195,9 +233,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isAuthenticated,
         isAuthenticating,
         userRole,
+        userPermissions,
         login,
         logout,
         getUserAttributes,
+        hasPermission,
         currentUser: user,
         signOut: logout
       }}
@@ -205,4 +245,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-}; 
+};
