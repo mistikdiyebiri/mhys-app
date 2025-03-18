@@ -88,27 +88,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Kullanıcının oturum durumunu kontrol et
     const checkUser = async () => {
       try {
+        console.log('AuthContext: Kullanıcı oturum durumu kontrol ediliyor...');
+        
+        // window.mockAuthMethods var mı kontrol et
+        if (!window.mockAuthMethods) {
+          console.error('AuthContext: window.mockAuthMethods bulunamadı!');
+          setIsAuthenticating(false);
+          return;
+        }
+        
         // Mock metodları kullan
         const currentUser = await window.mockAuthMethods.getCurrentUser();
+        console.log('AuthContext: Kullanıcı bulundu:', currentUser);
         setUser(currentUser);
         setIsAuthenticated(true);
         
         // Kullanıcı rolünü al
         const userAttributes = await window.mockAuthMethods.fetchUserAttributes();
+        console.log('AuthContext: Kullanıcı özellikleri:', userAttributes);
         const roleValue = userAttributes['custom:role'];
         setUserRole(roleValue || null);
         
         // Kullanıcının izinlerini yükle
         if (roleValue) {
+          console.log('AuthContext: Rol yükleniyor:', roleValue);
           loadUserPermissions(roleValue);
         }
       } catch (error) {
         // Hata durumunda kullanıcı bilgilerini temizle
+        console.error('AuthContext: Oturum kontrolü sırasında hata oluştu:', error);
         setUser(null);
         setIsAuthenticated(false);
         setUserRole(null);
         setUserPermissions([]);
-        console.log('Oturum kontrolü sırasında hata oluştu:', error);
       } finally {
         setIsAuthenticating(false);
       }
@@ -118,39 +130,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log('AuthContext: Giriş yapılıyor...', email);
     setIsAuthenticating(true);
     try {
       // Mock signIn metodunu kullan
+      console.log('AuthContext: Mock signIn çağrılıyor');
       const { isSignedIn, nextStep } = await window.mockAuthMethods.signIn({ username: email, password });
+      console.log('AuthContext: Giriş sonucu:', { isSignedIn, nextStep });
       
       if (isSignedIn) {
         // Başarılı giriş
         try {
+          console.log('AuthContext: Kullanıcı bilgileri alınıyor');
           const currentUser = await window.mockAuthMethods.getCurrentUser();
+          console.log('AuthContext: Mevcut kullanıcı:', currentUser);
           setUser(currentUser);
           setIsAuthenticated(true);
           
           // Kullanıcı rolünü al
           const userAttributes = await window.mockAuthMethods.fetchUserAttributes();
+          console.log('AuthContext: Kullanıcı özellikleri:', userAttributes);
           const roleValue = userAttributes['custom:role'];
           setUserRole(roleValue || null);
           
           // Kullanıcının izinlerini yükle
           if (roleValue) {
+            console.log('AuthContext: Kullanıcı izinleri yükleniyor:', roleValue);
             loadUserPermissions(roleValue);
           }
           
           return currentUser;
         } catch (error) {
-          console.error('Kullanıcı bilgileri alınırken hata:', error);
+          console.error('AuthContext: Kullanıcı bilgileri alınırken hata:', error);
           throw new Error('Giriş başarılı ancak kullanıcı bilgileri alınamadı');
         }
       } else {
         // MFA gibi ek adımlar gerekiyor
+        console.warn(`AuthContext: Kimlik doğrulama ek adım gerektiriyor: ${nextStep.signInStep}`);
         throw new Error(`Kimlik doğrulama ek adım gerektiriyor: ${nextStep.signInStep}`);
       }
     } catch (error: any) {
-      console.error('Giriş yapılırken hata:', error);
+      console.error('AuthContext: Giriş yapılırken hata:', error);
       
       // Hata mesajını doğrudan göster
       throw error;
@@ -160,19 +180,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    console.log('AuthContext: Çıkış yapılıyor...');
     try {
       await window.mockAuthMethods.signOut();
+      console.log('AuthContext: Çıkış başarılı');
       setUser(null);
       setIsAuthenticated(false);
       setUserRole(null);
       setUserPermissions([]);
     } catch (error) {
-      console.error('Çıkış yapılırken hata oluştu:', error);
+      console.error('AuthContext: Çıkış yapılırken hata oluştu:', error);
       throw error;
     }
   };
 
   const getUserAttributes = async (): Promise<UserAttributes> => {
+    console.log('AuthContext: Kullanıcı özellikleri isteniyor');
     // Yeniden deneme mekanizması ile localStorage'dan doğrudan veri alma
     const maxRetries = 3;
     let retryCount = 0;
@@ -184,12 +207,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         // Önce state'deki user'a bak
         if (user) {
+          console.log('AuthContext: State içindeki kullanıcıdan özellikler alınıyor');
           return await window.mockAuthMethods.fetchUserAttributes();
         }
         
         // User state'i boşsa localStorage'a doğrudan bak
         const savedUser = localStorage.getItem('mockCurrentUser');
         if (savedUser) {
+          console.log('AuthContext: LocalStorage\'dan kullanıcı bilgileri alınıyor');
           const parsedUser = JSON.parse(savedUser);
           if (parsedUser && parsedUser.attributes) {
             // User state güncellenmemiş olsa bile localStorage'dan bilgileri alabiliyoruz
@@ -197,6 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
         
+        console.log(`AuthContext: Kullanıcı bilgileri bulunamadı, ${retryCount + 1}. deneme yapılıyor...`);
         // Eğer hala bulunamadıysa biraz bekle ve tekrar dene
         await delay(500);
         retryCount++;
@@ -205,8 +231,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw new Error('Kullanıcı oturum açmamış');
         }
       } catch (error) {
+        console.warn(`AuthContext: Kullanıcı özellikleri alınırken hata, ${retryCount + 1}. deneme:`, error);
         if (retryCount === maxRetries - 1) {
-          console.error('Kullanıcı özellikleri alınırken hata oluştu:', error);
+          console.error('AuthContext: Tüm denemeler başarısız oldu, kullanıcı özellikleri alınamadı:', error);
           throw error;
         }
         retryCount++;
@@ -214,6 +241,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
     
+    console.error('AuthContext: Kullanıcı özellikleri alınamadı, kullanıcı oturum açmamış');
     throw new Error('Kullanıcı oturum açmamış');
   };
 
