@@ -1,21 +1,17 @@
+# Amplify Console build settings
 version: 1
-backend:
-  phases:
-    build:
-      commands:
-        - '# Burada backend build komutları olabilir - mock mod için gerekli değil'
 frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm ci
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: build
+    baseDirectory: /build
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
+      - node_modules/**
