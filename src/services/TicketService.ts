@@ -27,15 +27,24 @@ class TicketService {
     // Geliştirme modunda olduğumuzu varsayalım
     this.isProduction = false; // Geliştirme modunda çalış
     
+    console.log('TicketService başlatıldı, isProduction:', this.isProduction);
+    
     // Geliştirme modunda mock veriler kullan
     if (!this.isProduction) {
-      this.tickets = createMockTickets();
-      this.comments = createMockTicketComments();
+      try {
+        this.tickets = createMockTickets();
+        this.comments = createMockTicketComments();
+        console.log('Mock veriler yüklendi, ticket sayısı:', this.tickets.length);
+      } catch (error) {
+        console.error('Mock veri yüklenirken hata oluştu:', error);
+      }
     }
   }
 
   static getInstance(): TicketService {
+    console.log('TicketService.getInstance çağrıldı');
     if (!TicketService.instance) {
+      console.log('TicketService örneği oluşturuluyor...');
       TicketService.instance = new TicketService();
     }
     return TicketService.instance;
