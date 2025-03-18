@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Container,
@@ -29,10 +29,25 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // Amplify konfigürasyonunu kontrol et
+  useEffect(() => {
+    try {
+      console.log('Login: Amplify konfigürasyonu kontrol ediliyor...');
+      // @ts-ignore
+      const config = Amplify.getConfig();
+      console.log('Login: Mevcut Amplify konfigürasyonu:', JSON.stringify(config, null, 2));
+    } catch (error) {
+      console.error('Login: Amplify konfigürasyonu kontrol edilirken hata:', error);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Login: Giriş denemesi yapılıyor:', email);
+    
     if (!email || !password) {
+      console.warn('Login: E-posta veya şifre boş!');
       setError('Lütfen e-posta ve şifre giriniz');
       setShowAlert(true);
       return;
@@ -42,10 +57,17 @@ const Login: React.FC = () => {
     setError('');
     
     try {
+      console.log('Login: AuthContext.login fonksiyonu çağrılıyor...');
       await login(email, password);
+      console.log('Login: Giriş başarılı, portala yönlendiriliyor');
       navigate('/portal');
     } catch (error: any) {
-      console.error('Giriş yaparken hata oluştu:', error);
+      console.error('Login: Giriş yaparken hata oluştu:', error);
+      
+      // Error object'in içeriğini incele
+      console.log('Login: Hata tipi:', typeof error);
+      console.log('Login: Hata mesajı:', error.message);
+      console.log('Login: Hata özellikleri:', Object.keys(error));
       
       if (error.code === 'UserNotFoundException') {
         setError('Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı');
@@ -55,7 +77,8 @@ const Login: React.FC = () => {
         setError('Hesabınız henüz doğrulanmamış');
         // Doğrulama işlemine yönlendirme yapılabilir
       } else {
-        setError('Giriş yapılırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+        // Eğer özel bir hata kodu yoksa, hatanın doğrudan mesajını göster
+        setError(error.message || 'Giriş yapılırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
       }
       
       setShowAlert(true);
@@ -66,30 +89,54 @@ const Login: React.FC = () => {
 
   const handleForgotPassword = async () => {
     if (!email) {
+      console.warn('Login: Şifre sıfırlama için e-posta adresi boş!');
       setError('Şifre sıfırlama için lütfen e-posta adresinizi giriniz');
       setShowAlert(true);
       return;
     }
     
+    console.log('Login: Şifre sıfırlama işlemi başlatılıyor:', email);
     setLoading(true);
     
     try {
+      // Mock ortamda gerçekten çalışmayacak, sadece simüle ediyoruz
+      console.log('Login: resetPassword fonksiyonu çağrılıyor');
       await resetPassword({ username: email });
+      console.log('Login: Şifre sıfırlama işlemi başarılı, yönlendiriliyor');
       navigate(`/reset-password?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      console.error('Şifre sıfırlama işlemi başlatılırken hata oluştu:', error);
+      console.error('Login: Şifre sıfırlama işlemi başlatılırken hata oluştu:', error);
+      
+      // Error object'in içeriğini incele
+      console.log('Login: Hata tipi:', typeof error);
+      console.log('Login: Hata mesajı:', error.message);
+      console.log('Login: Hata özellikleri:', Object.keys(error));
       
       if (error.code === 'UserNotFoundException') {
         setError('Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı');
       } else if (error.code === 'LimitExceededException') {
         setError('Çok fazla deneme yaptınız. Lütfen daha sonra tekrar deneyin.');
       } else {
-        setError('Şifre sıfırlama işlemi başlatılırken bir hata oluştu.');
+        setError(error.message || 'Şifre sıfırlama işlemi başlatılırken bir hata oluştu.');
       }
       
       setShowAlert(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Test kullanıcıları için hızlı giriş
+  const setTestUser = (userType: string) => {
+    if (userType === 'admin') {
+      setEmail('admin@mhys.com');
+      setPassword('Admin123!');
+    } else if (userType === 'employee') {
+      setEmail('personel@mhys.com');
+      setPassword('Personel123!');
+    } else if (userType === 'customer') {
+      setEmail('musteri@firma.com');
+      setPassword('Musteri123!');
     }
   };
 
@@ -193,6 +240,39 @@ const Login: React.FC = () => {
           </Box>
         </Paper>
         
+        {/* Geliştirme sırasında test için hızlı giriş butonları */}
+        {process.env.NODE_ENV !== 'production' && (
+          <Box mt={3} sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+            <Typography variant="body2" align="center" sx={{ mb: 1 }}>
+              Test Kullanıcıları
+            </Typography>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              onClick={() => setTestUser('admin')}
+              color="secondary"
+            >
+              Admin
+            </Button>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              onClick={() => setTestUser('employee')}
+              color="primary"
+            >
+              Personel
+            </Button>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              onClick={() => setTestUser('customer')}
+              color="info"
+            >
+              Müşteri
+            </Button>
+          </Box>
+        )}
+        
         <Box mt={3}>
           <Typography variant="body2" align="center">
             Yönetici veya personel girişi için{' '}
@@ -223,4 +303,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default Login;
