@@ -11,6 +11,7 @@ export enum PagePermission {
   SETTINGS = 'settings',
   GEMINI_SETTINGS = 'gemini_settings',
   ROLES = 'roles',
+  NOTIFICATIONS = 'notifications',
   
   // Alt işlemler
   TICKET_VIEW = 'ticket_view',
@@ -47,7 +48,12 @@ export enum PagePermission {
   ROLE_CREATE = 'role_create',
   ROLE_EDIT = 'role_edit',
   ROLE_DELETE = 'role_delete',
-  ROLE_ASSIGN = 'role_assign'
+  ROLE_ASSIGN = 'role_assign',
+  
+  NOTIFICATION_VIEW = 'notification_view',
+  NOTIFICATION_CREATE = 'notification_create',
+  NOTIFICATION_EDIT = 'notification_edit',
+  NOTIFICATION_DELETE = 'notification_delete'
 }
 
 // İzin kategorilerini tanımlayalım
@@ -58,7 +64,8 @@ export const PermissionCategories = {
   DEPARTMENTS: 'Departman Yönetimi',
   REPORTS: 'Raporlar',
   SETTINGS: 'Ayarlar',
-  ROLES: 'Rol Yönetimi'
+  ROLES: 'Rol Yönetimi',
+  NOTIFICATIONS: 'Bildirimler'
 };
 
 // Tüm izinleri gruplar halinde organize edelim
@@ -73,7 +80,8 @@ export const PermissionGroups: Record<string, { title: string; permissions: Page
       PagePermission.REPORTS,
       PagePermission.SETTINGS,
       PagePermission.GEMINI_SETTINGS,
-      PagePermission.ROLES
+      PagePermission.ROLES,
+      PagePermission.NOTIFICATIONS
     ]
   },
   TICKETS: {
@@ -134,6 +142,15 @@ export const PermissionGroups: Record<string, { title: string; permissions: Page
       PagePermission.ROLE_DELETE,
       PagePermission.ROLE_ASSIGN
     ]
+  },
+  NOTIFICATIONS: {
+    title: PermissionCategories.NOTIFICATIONS,
+    permissions: [
+      PagePermission.NOTIFICATION_VIEW,
+      PagePermission.NOTIFICATION_CREATE,
+      PagePermission.NOTIFICATION_EDIT,
+      PagePermission.NOTIFICATION_DELETE
+    ]
   }
 };
 
@@ -147,6 +164,7 @@ export const PermissionDescriptions: Record<PagePermission, string> = {
   [PagePermission.SETTINGS]: 'Ayarlar sayfasını görüntüleme',
   [PagePermission.GEMINI_SETTINGS]: 'Gemini AI ayarları sayfasını görüntüleme',
   [PagePermission.ROLES]: 'Rol yönetimi sayfasını görüntüleme',
+  [PagePermission.NOTIFICATIONS]: 'Bildirimler sayfasını görüntüleme',
   
   [PagePermission.TICKET_VIEW]: 'Destek taleplerini görüntüleme',
   [PagePermission.TICKET_CREATE]: 'Yeni destek talebi oluşturma',
@@ -182,7 +200,12 @@ export const PermissionDescriptions: Record<PagePermission, string> = {
   [PagePermission.ROLE_CREATE]: 'Yeni rol oluşturma',
   [PagePermission.ROLE_EDIT]: 'Rolleri düzenleme',
   [PagePermission.ROLE_DELETE]: 'Rolleri silme',
-  [PagePermission.ROLE_ASSIGN]: 'Rolleri personele atama'
+  [PagePermission.ROLE_ASSIGN]: 'Rolleri personele atama',
+  
+  [PagePermission.NOTIFICATION_VIEW]: 'Bildirimleri görüntüleme',
+  [PagePermission.NOTIFICATION_CREATE]: 'Yeni bildirim oluşturma',
+  [PagePermission.NOTIFICATION_EDIT]: 'Bildirimleri düzenleme',
+  [PagePermission.NOTIFICATION_DELETE]: 'Bildirimleri silme'
 };
 
 // Rol model tanımı
@@ -214,6 +237,7 @@ export const DefaultRoles: Partial<Role>[] = [
       PagePermission.TICKETS,
       PagePermission.EMPLOYEES,
       PagePermission.DEPARTMENTS,
+      PagePermission.NOTIFICATIONS,
       PagePermission.TICKET_VIEW,
       PagePermission.TICKET_CREATE,
       PagePermission.TICKET_EDIT,
@@ -226,7 +250,8 @@ export const DefaultRoles: Partial<Role>[] = [
       PagePermission.DEPARTMENT_EDIT,
       PagePermission.REPORT_VIEW,
       PagePermission.REPORT_CREATE,
-      PagePermission.GEMINI_VIEW
+      PagePermission.GEMINI_VIEW,
+      PagePermission.NOTIFICATION_VIEW
     ],
     isSystem: true
   },
@@ -243,7 +268,9 @@ export const DefaultRoles: Partial<Role>[] = [
       PagePermission.TICKET_CHANGE_STATUS,
       PagePermission.EMPLOYEE_VIEW,
       PagePermission.DEPARTMENT_VIEW,
-      PagePermission.GEMINI_VIEW
+      PagePermission.GEMINI_VIEW,
+      PagePermission.NOTIFICATIONS,
+      PagePermission.NOTIFICATION_VIEW
     ],
     isSystem: true
   },
@@ -257,7 +284,9 @@ export const DefaultRoles: Partial<Role>[] = [
       PagePermission.REPORT_VIEW,
       PagePermission.REPORT_CREATE,
       PagePermission.REPORT_EXPORT,
-      PagePermission.TICKET_VIEW
+      PagePermission.TICKET_VIEW,
+      PagePermission.NOTIFICATIONS,
+      PagePermission.NOTIFICATION_VIEW
     ],
     isSystem: true
   }

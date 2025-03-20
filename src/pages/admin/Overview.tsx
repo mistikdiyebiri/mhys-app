@@ -36,7 +36,9 @@ import {
   BarChart as BarChartIcon,
   PieChart as PieChartIcon,
   ArrowForward as ArrowForwardIcon,
-  AccessTime as AccessTimeIcon
+  Speed as SpeedIcon,
+  Insights as InsightsIcon,
+  Timeline as TimelineIcon
 } from '@mui/icons-material';
 import { 
   Chart as ChartJS, 
@@ -55,6 +57,7 @@ import {
 import { Line, Bar, Doughnut, Pie, PolarArea } from 'react-chartjs-2';
 import { useAuth } from '../../contexts/AuthContext';
 import PersonalStats from '../../components/dashboard/PersonalStats';
+import { alpha } from '@mui/material/styles';
 
 // Chart.js kayıt
 ChartJS.register(
@@ -115,23 +118,37 @@ const Overview: React.FC = () => {
     activeUsers: 42,
     averageResponseTime: '36 dakika',
     averageResolutionTime: '1.2 gün',
-    customerSatisfaction: 87
+    customerSatisfaction: 87,
+    ticketTrend: '+14%',
+    resolutionRate: '92%',
+    firstResponseTime: '28 dakika',
+    reopenRate: '4.2%'
   });
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Gerçek uygulamada, Amplify GraphQL API üzerinden verileri çekeriz
-    // API.graphql(graphqlOperation(listTickets, { filter: ... }))
-    // Şimdilik sahte veriler kullanacağız
+    // Sayfa yüklendiğinde veri çekelim
+    fetchData();
   }, []);
 
   const fetchData = () => {
     setLoading(true);
+    
+    // Gerçek uygulamada, burada API çağrısı yapılır
     setTimeout(() => {
-      // Gerçek uygulamada, burada veriyi yenileriz
+      // Simüle edilmiş rasgele veri güncellemeleri
+      setStats(prevStats => ({
+        ...prevStats,
+        ticketsOpen: Math.floor(Math.random() * 10) + 18,
+        ticketsInProgress: Math.floor(Math.random() * 8) + 9,
+        ticketsResolved: Math.floor(Math.random() * 15) + 40,
+        closedToday: Math.floor(Math.random() * 5) + 6,
+        activeUsers: Math.floor(Math.random() * 20) + 35,
+        customerSatisfaction: Math.floor(Math.random() * 10) + 82
+      }));
       setLoading(false);
-    }, 1000);
+    }, 800);
   };
 
   // Tab değişimi
@@ -147,17 +164,21 @@ const Overview: React.FC = () => {
         label: 'Açılan Talepler',
         data: [5, 8, 12, 7, 10, 3, 2],
         borderColor: theme.palette.error.main,
-        backgroundColor: theme.palette.error.light,
+        backgroundColor: alpha(theme.palette.error.main, 0.2),
         tension: 0.4,
         fill: true,
+        borderWidth: 2,
+        pointBackgroundColor: theme.palette.error.main,
       },
       {
         label: 'Çözülen Talepler',
         data: [3, 5, 8, 13, 8, 5, 3],
         borderColor: theme.palette.success.main,
-        backgroundColor: theme.palette.success.light,
+        backgroundColor: alpha(theme.palette.success.main, 0.2),
         tension: 0.4,
         fill: true,
+        borderWidth: 2,
+        pointBackgroundColor: theme.palette.success.main,
       },
     ],
   };
@@ -300,30 +321,37 @@ const Overview: React.FC = () => {
 
   // İstatistik kartı bileşeni
   const StatCard = ({ title, value, icon, color, changeIcon, changeText, changeDirection, onClick }: any) => (
-    <Card sx={{ height: '100%', transition: 'all 0.3s' }} onClick={onClick}>
+    <Card sx={{ 
+      height: '100%', 
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        transform: 'translateY(-3px)',
+        boxShadow: (theme) => `0 8px 16px 0 ${alpha(theme.palette.grey[500], 0.2)}`
+      }
+    }} onClick={onClick}>
       <ButtonBase sx={{ width: '100%', height: '100%', display: 'block', textAlign: 'left' }}>
-        <CardContent>
+        <CardContent sx={{ p: 2 }}>
           <Box display="flex" alignItems="center" mb={1}>
-            <Avatar sx={{ bgcolor: color, mr: 1.5, width: 32, height: 32 }}>
+            <Avatar sx={{ bgcolor: color, mr: 1.5, width: 30, height: 30 }}>
               {icon}
             </Avatar>
-            <Typography variant="subtitle2" component="div" noWrap>
+            <Typography variant="body2" component="div" noWrap fontWeight="medium">
               {title}
             </Typography>
           </Box>
-          <Typography variant="h5" component="div">
+          <Typography variant="h5" component="div" fontWeight="bold" mb={1}>
             {value}
           </Typography>
           {changeText && (
             <Box display="flex" alignItems="center">
               {changeDirection === 'up' ? <TrendingUpIcon fontSize="small" color="success" /> : <TrendingDownIcon fontSize="small" color="error" />}
-              <Typography variant="caption" color={changeDirection === 'up' ? 'success.main' : 'error.main'} ml={0.5}>
+              <Typography variant="caption" color={changeDirection === 'up' ? 'success.main' : 'error.main'} ml={0.5} fontWeight="medium">
                 {changeText}
               </Typography>
             </Box>
           )}
           {onClick && (
-            <Box display="flex" justifyContent="flex-end" mt={1}>
+            <Box display="flex" justifyContent="flex-end" mt={0.5}>
               <ArrowForwardIcon fontSize="small" color="action" />
             </Box>
           )}
@@ -331,6 +359,62 @@ const Overview: React.FC = () => {
       </ButtonBase>
     </Card>
   );
+
+  // Yeni: Cevap Süreleri Trendi (son 7 gün)
+  const responseTimeData = {
+    labels: ['7 Gün Önce', '6 Gün Önce', '5 Gün Önce', '4 Gün Önce', '3 Gün Önce', '2 Gün Önce', 'Bugün'],
+    datasets: [
+      {
+        label: 'İlk Yanıt Süresi (dk)',
+        data: [42, 35, 38, 25, 30, 28, 26],
+        borderColor: theme.palette.primary.main,
+        backgroundColor: alpha(theme.palette.primary.main, 0.2),
+        tension: 0.3,
+        fill: false,
+        borderWidth: 2,
+        pointBackgroundColor: theme.palette.primary.main,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Çözüm Süresi (saat)',
+        data: [4.8, 5.2, 3.5, 4.2, 3.8, 3.2, 3.0],
+        borderColor: theme.palette.warning.main,
+        backgroundColor: alpha(theme.palette.warning.main, 0.2),
+        tension: 0.3,
+        fill: false,
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointBackgroundColor: theme.palette.warning.main,
+        yAxisID: 'y1'
+      }
+    ]
+  };
+
+  // Yeni: Çözüm oranı (son 6 ay)
+  const resolutionRateData = {
+    labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz'],
+    datasets: [
+      {
+        label: 'Çözüm Oranı',
+        data: [85, 88, 92, 91, 94, 96],
+        fill: true,
+        backgroundColor: alpha(theme.palette.info.main, 0.2),
+        borderColor: theme.palette.info.main,
+        borderWidth: 2,
+        pointBackgroundColor: theme.palette.info.main,
+        tension: 0.3
+      },
+      {
+        label: 'Hedef',
+        data: [90, 90, 90, 90, 90, 90],
+        fill: false,
+        borderColor: alpha(theme.palette.grey[500], 0.5),
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointRadius: 0
+      }
+    ]
+  };
 
   // Genel Bakış İçeriği
   const OverviewContent = () => (
@@ -344,7 +428,7 @@ const Overview: React.FC = () => {
             icon={<SupportIcon fontSize="small" />} 
             color="error.main"
             changeDirection="up"
-            changeText="+12%"
+            changeText={stats.ticketTrend}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
@@ -362,7 +446,7 @@ const Overview: React.FC = () => {
             icon={<CheckIcon fontSize="small" />} 
             color="success.main"
             changeDirection="up"
-            changeText="+8%"
+            changeText={stats.resolutionRate}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
@@ -397,7 +481,7 @@ const Overview: React.FC = () => {
           <Grid item xs={6} sm={3}>
             <StatCard 
               title="Ort. Yanıt Süresi" 
-              value={stats.averageResponseTime} 
+              value={stats.firstResponseTime} 
               icon={<CalendarMonthIcon fontSize="small" />} 
               color="warning.main"
             />
@@ -416,7 +500,7 @@ const Overview: React.FC = () => {
       {/* Grafikler - İki ana sütun */}
       <Grid container spacing={3} mb={4}>
         <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="subtitle1" fontWeight="medium">Haftalık Destek Talepleri</Typography>
               <BarChartIcon fontSize="small" color="action" />
@@ -432,11 +516,26 @@ const Overview: React.FC = () => {
                     labels: {
                       boxWidth: 10,
                       usePointStyle: true,
+                      font: {
+                        size: 11,
+                        weight: 'bold' as const
+                      }
                     }
                   },
                   tooltip: {
                     mode: 'index',
                     intersect: false,
+                    usePointStyle: true,
+                    backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                    titleFont: {
+                      size: 12,
+                      weight: 'bold' as const
+                    },
+                    bodyFont: {
+                      size: 11
+                    },
+                    padding: 10,
+                    cornerRadius: 8
                   }
                 },
                 scales: {
@@ -444,11 +543,22 @@ const Overview: React.FC = () => {
                     beginAtZero: true,
                     grid: {
                       display: true,
+                      color: alpha(theme.palette.grey[500], 0.15)
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   },
                   x: {
                     grid: {
-                      display: false,
+                      display: false
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   }
                 },
@@ -458,7 +568,9 @@ const Overview: React.FC = () => {
                   },
                   point: {
                     radius: 3,
-                    hoverRadius: 5
+                    hoverRadius: 5,
+                    borderWidth: 2,
+                    borderColor: theme.palette.background.paper
                   }
                 }
               }} 
@@ -466,9 +578,9 @@ const Overview: React.FC = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6} lg={4}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Kategori Dağılımı</Typography>
+              <Typography variant="subtitle1" fontWeight="medium">Departman Dağılımı</Typography>
               <PieChartIcon fontSize="small" color="action" />
             </Box>
             <Box height={200} display="flex" justifyContent="center" alignItems="center">
@@ -483,11 +595,47 @@ const Overview: React.FC = () => {
                       labels: {
                         boxWidth: 10,
                         usePointStyle: true,
+                        font: {
+                          size: 10,
+                        }
                       }
+                    },
+                    tooltip: {
+                      usePointStyle: true,
+                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                      titleFont: {
+                        size: 12,
+                        weight: 'bold' as const
+                      },
+                      bodyFont: {
+                        size: 11
+                      },
+                      padding: 8,
+                      cornerRadius: 6
+                    }
+                  },
+                  elements: {
+                    arc: {
+                      borderWidth: 1,
+                      borderColor: theme.palette.background.paper
                     }
                   }
                 }} 
               />
+            </Box>
+            <Box mt={2}>
+              <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" fontSize="0.75rem">
+                <BusinessIcon fontSize="small" sx={{ mr: 1 }} />
+                Teknik departmanı bu ay en yüksek talep sayısına sahip.
+              </Typography>
+              <Box mt={1} display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">
+                  Toplam departman sayısı: 3
+                </Typography>
+                <Typography variant="caption" color="primary" sx={{ cursor: 'pointer' }}>
+                  Detaylı analiz
+                </Typography>
+              </Box>
             </Box>
           </Paper>
         </Grid>
@@ -496,7 +644,7 @@ const Overview: React.FC = () => {
       {/* Üçüncü sıra */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="subtitle1" fontWeight="medium">Son Aktiviteler</Typography>
             </Box>
@@ -528,41 +676,102 @@ const Overview: React.FC = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Öncelik Dağılımı</Typography>
+              <Typography variant="subtitle1" fontWeight="medium">Cevap Süreleri Trendi</Typography>
+              <TimelineIcon fontSize="small" color="action" />
             </Box>
             <Box height={240} display="flex" justifyContent="center">
-              <Bar 
-                data={priorityChartData} 
+              <Line 
+                data={responseTimeData} 
                 options={{
                   responsive: true,
-                  indexAxis: 'y' as const,
                   maintainAspectRatio: false,
                   plugins: {
                     legend: {
-                      display: false
+                      position: 'top',
+                      labels: {
+                        boxWidth: 10,
+                        usePointStyle: true,
+                        font: {
+                          size: 10,
+                        }
+                      }
+                    },
+                    tooltip: {
+                      usePointStyle: true,
+                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                      titleFont: {
+                        size: 12,
+                        weight: 'bold' as const
+                      },
+                      bodyFont: {
+                        size: 11
+                      },
+                      padding: 8,
+                      cornerRadius: 6
                     }
                   },
                   scales: {
-                    x: {
+                    y: {
+                      type: 'linear',
+                      display: true,
+                      position: 'left',
+                      title: {
+                        display: true,
+                        text: 'Dakika',
+                        font: {
+                          size: 10,
+                        }
+                      },
+                      suggestedMin: 0,
+                      suggestedMax: 50,
+                      ticks: {
+                        font: {
+                          size: 9,
+                        }
+                      }
+                    },
+                    y1: {
+                      type: 'linear',
+                      display: true,
+                      position: 'right',
+                      title: {
+                        display: true,
+                        text: 'Saat',
+                        font: {
+                          size: 10,
+                        }
+                      },
+                      suggestedMin: 0,
+                      suggestedMax: 8,
+                      ticks: {
+                        font: {
+                          size: 9,
+                        }
+                      },
                       grid: {
                         display: false,
                       }
                     },
-                    y: {
+                    x: {
+                      ticks: {
+                        font: {
+                          size: 9,
+                        }
+                      },
                       grid: {
                         display: false,
                       }
                     }
                   }
-                }} 
+                }}
               />
             </Box>
             <Box mt={2}>
-              <Typography variant="body2" color="warning.main" display="flex" alignItems="center">
-                <WarningIcon fontSize="small" sx={{ mr: 1 }} />
-                Kritik öncelikli 3 destek talebi bulunmaktadır.
+              <Typography variant="body2" color="primary" display="flex" alignItems="center" fontSize="0.75rem">
+                <InsightsIcon fontSize="small" sx={{ mr: 1 }} />
+                Cevap süreleri son hafta içinde %12 oranında iyileşti.
               </Typography>
             </Box>
           </Paper>
@@ -576,7 +785,7 @@ const Overview: React.FC = () => {
     <>
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="subtitle1" fontWeight="medium">Aylık Talep Trendi</Typography>
             </Box>
@@ -588,6 +797,19 @@ const Overview: React.FC = () => {
                 plugins: {
                   legend: {
                     display: false
+                  },
+                  tooltip: {
+                    usePointStyle: true,
+                    backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                    titleFont: {
+                      size: 12,
+                      weight: 'bold' as const
+                    },
+                    bodyFont: {
+                      size: 11
+                    },
+                    padding: 8,
+                    cornerRadius: 6
                   }
                 },
                 scales: {
@@ -595,11 +817,22 @@ const Overview: React.FC = () => {
                     beginAtZero: true,
                     grid: {
                       display: true,
+                      color: alpha(theme.palette.grey[500], 0.15)
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   },
                   x: {
                     grid: {
-                      display: false,
+                      display: false
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   }
                 }
@@ -608,7 +841,7 @@ const Overview: React.FC = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6} lg={4}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="subtitle1" fontWeight="medium">Departman Dağılımı</Typography>
             </Box>
@@ -624,7 +857,23 @@ const Overview: React.FC = () => {
                       labels: {
                         boxWidth: 10,
                         usePointStyle: true,
+                        font: {
+                          size: 10,
+                        }
                       }
+                    },
+                    tooltip: {
+                      usePointStyle: true,
+                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                      titleFont: {
+                        size: 12,
+                        weight: 'bold' as const
+                      },
+                      bodyFont: {
+                        size: 11
+                      },
+                      padding: 8,
+                      cornerRadius: 6
                     }
                   },
                   cutout: '60%'
@@ -636,10 +885,86 @@ const Overview: React.FC = () => {
       </Grid>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="subtitle1" fontWeight="medium">Çözüm Oranı (Son 6 Ay)</Typography>
+              <SpeedIcon fontSize="small" color="action" />
+            </Box>
+            <Box height={240} display="flex" justifyContent="center" alignItems="center">
+              <Line 
+                data={resolutionRateData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top',
+                      labels: {
+                        boxWidth: 10,
+                        usePointStyle: true,
+                        font: {
+                          size: 10,
+                        }
+                      }
+                    },
+                    tooltip: {
+                      usePointStyle: true,
+                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                      titleFont: {
+                        size: 12,
+                        weight: 'bold' as const
+                      },
+                      bodyFont: {
+                        size: 11
+                      },
+                      padding: 8,
+                      cornerRadius: 6
+                    }
+                  },
+                  scales: {
+                    y: {
+                      min: 80,
+                      max: 100,
+                      ticks: {
+                        callback: function(value) {
+                          return value + '%';
+                        },
+                        font: {
+                          size: 10
+                        }
+                      },
+                      grid: {
+                        color: alpha(theme.palette.grey[500], 0.15)
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      },
+                      ticks: {
+                        font: {
+                          size: 10
+                        }
+                      }
+                    }
+                  }
+                }} 
+              />
+            </Box>
+            <Box mt={2}>
+              <Typography variant="body2" color="info.main" display="flex" alignItems="center" fontSize="0.75rem">
+                <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />
+                Son 6 ayda çözüm oranı %11 arttı
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="subtitle1" fontWeight="medium">Personel Performansı</Typography>
+              <BarChartIcon fontSize="small" color="action" />
             </Box>
             <Bar 
               data={employeePerformanceData} 
@@ -652,7 +977,23 @@ const Overview: React.FC = () => {
                     labels: {
                       boxWidth: 10,
                       usePointStyle: true,
+                      font: {
+                        size: 10,
+                      }
                     }
+                  },
+                  tooltip: {
+                    usePointStyle: true,
+                    backgroundColor: alpha(theme.palette.grey[900], 0.8),
+                    titleFont: {
+                      size: 12,
+                      weight: 'bold' as const
+                    },
+                    bodyFont: {
+                      size: 11
+                    },
+                    padding: 8,
+                    cornerRadius: 6
                   }
                 },
                 scales: {
@@ -660,48 +1001,40 @@ const Overview: React.FC = () => {
                     beginAtZero: true,
                     grid: {
                       display: true,
+                      color: alpha(theme.palette.grey[500], 0.15)
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   },
                   x: {
                     grid: {
-                      display: false,
+                      display: false
+                    },
+                    ticks: {
+                      font: {
+                        size: 10
+                      }
                     }
                   }
                 }
               }} 
             />
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Müşteri Memnuniyeti</Typography>
-            </Box>
-            <Box height={240} display="flex" justifyContent="center" alignItems="center">
-              <PolarArea 
-                data={satisfactionData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'right',
-                      labels: {
-                        boxWidth: 10,
-                        usePointStyle: true,
-                        font: {
-                          size: 11
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    r: {
-                      display: false
-                    }
-                  }
-                }} 
-              />
+            <Box mt={2}>
+              <Typography variant="body2" color="success.main" display="flex" alignItems="center" fontSize="0.75rem">
+                <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />
+                Ayşe'nin performansı bu ay %23 arttı
+              </Typography>
+              <Box mt={1} display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">
+                  Ortalama çözüm süresi: 5.4 saat
+                </Typography>
+                <Typography variant="caption" color="primary" sx={{ cursor: 'pointer' }}>
+                  Tüm personel raporları
+                </Typography>
+              </Box>
             </Box>
           </Paper>
         </Grid>

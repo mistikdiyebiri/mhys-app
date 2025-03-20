@@ -7,13 +7,39 @@ const STORAGE_KEY = 'mhys_roles';
 
 class RoleService {
   private roles: Role[] = [];
+  private hasLocalStorage: boolean = false;
   
   constructor() {
-    this.loadRoles();
+    try {
+      // localStorage erişilebilir mi kontrol et
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Test amaçlı bir değer yaz ve oku
+        localStorage.setItem('test_storage', 'test');
+        localStorage.removeItem('test_storage');
+        this.hasLocalStorage = true;
+      }
+    } catch (error) {
+      console.warn('localStorage erişilemez, in-memory depolama kullanılacak:', error);
+      this.hasLocalStorage = false;
+    }
+    
+    // Rolleri yüklemeyi dene
+    try {
+      this.loadRoles();
+    } catch (error) {
+      console.error('Roller yüklenirken hata oluştu, varsayılan roller kullanılacak:', error);
+      this.initializeDefaultRoles();
+    }
   }
   
   // Rolleri yerel depolamadan yükle, eğer yoksa varsayılan rolleri kullan
   private loadRoles(): void {
+    if (!this.hasLocalStorage) {
+      // localStorage kullanılamıyorsa varsayılan rolleri kullan
+      this.initializeDefaultRoles();
+      return;
+    }
+    
     try {
       const savedRoles = localStorage.getItem(STORAGE_KEY);
       if (savedRoles) {
@@ -45,7 +71,16 @@ class RoleService {
   
   // Rolleri yerel depolamaya kaydet
   private saveRoles(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.roles));
+    if (!this.hasLocalStorage) {
+      // localStorage kullanılamıyorsa sadece in-memory olarak sakla
+      return;
+    }
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.roles));
+    } catch (error) {
+      console.error('Roller kaydedilirken hata oluştu:', error);
+    }
   }
   
   // Tüm rolleri getir
@@ -95,11 +130,32 @@ class RoleService {
   
   // Rol sil
   deleteRole(id: string): boolean {
-    const role = this.getRoleById(id);
-    if (!role || role.isSystem) return false;
+    // Geçerli bir ID olup olmadığını kontrol et
+    if (!id || typeof id !== 'string') {
+      console.error('Geçersiz rol ID\'si:', id);
+      return false;
+    }
     
-    this.roles = this.roles.filter(role => role.id !== id);
+    // Rol mevcut mu kontrol et
+    const role = this.getRoleById(id);
+    if (!role) {
+      console.error('Silinecek rol bulunamadı. ID:', id);
+      return false;
+    }
+    
+    // Sistem rollerini silmeye izin verme
+    if (role.isSystem) {
+      console.error('Sistem rolleri silinemez. Rol:', role.name);
+      return false;
+    }
+    
+    // Silme işlemini gerçekleştir
+    this.roles = this.roles.filter(r => r.id !== id);
+    
+    // Yerel depolamaya kaydet
     this.saveRoles();
+    
+    console.log(`"${role.name}" rolü başarıyla silindi`);
     return true;
   }
   

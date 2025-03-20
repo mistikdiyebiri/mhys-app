@@ -8,9 +8,9 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AuthProvider } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 // Sayfalar
-import Home from "./pages/Home";
 import CustomerLogin from "./pages/customer/Login";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminLogin from "./pages/admin/Login";
@@ -23,6 +23,8 @@ import AdminSettings from "./pages/admin/Settings";
 import GeminiSettings from "./pages/admin/GeminiSettings";
 import RolesManagement from "./pages/admin/RolesManagement";
 import QuickReplySettings from "./pages/admin/QuickReplySettings";
+import Notifications from "./pages/admin/Notifications";
+import EmailSettings from "./pages/admin/EmailSettings";
 
 // Bileşenler
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -181,105 +183,123 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
-          <Routes>
-            {/* Ana Sayfa */}
-            <Route path="/" element={<Home />} />
+        <NotificationProvider>
+          <Router>
+            <Routes>
+              {/* Ana Sayfa */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Müşteri Sayfaları */}
-            <Route path="/login" element={<CustomerLogin />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute requiredRole="customer">
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Müşteri Sayfaları */}
+              <Route path="/login" element={<CustomerLogin />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="customer">
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin Sayfaları */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/admin"
-              element={<Navigate to="/admin/login" replace />}
-            />
-            <Route
-              path="/admin/dashboard/*"
-              element={
-                <ProtectedRoute requiredRole="admin,employee">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/tickets"
-              element={
-                <ProtectedRoute requiredRole="admin,employee">
-                  <AdminTickets />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/employees"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminEmployees />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/departments"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDepartments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/reports"
-              element={
-                <ProtectedRoute requiredRole="admin,employee">
-                  <AdminReports />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/gemini-settings"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <GeminiSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/quickreplies"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <QuickReplySettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/roles"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <RolesManagement />
-                </ProtectedRoute>
-              }
-            />
+              {/* Admin Sayfaları */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route
+                path="/admin"
+                element={<Navigate to="/admin/login" replace />}
+              />
+              <Route
+                path="/admin/dashboard/*"
+                element={
+                  <ProtectedRoute requiredRole="admin,employee">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/tickets"
+                element={
+                  <ProtectedRoute requiredRole="admin,employee">
+                    <AdminTickets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/employees"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminEmployees />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/departments"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDepartments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute requiredRole="admin,employee">
+                    <AdminReports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/notifications"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Notifications />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/gemini-settings"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <GeminiSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/quickreplies"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <QuickReplySettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/roles"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <RolesManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/email-settings"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <EmailSettings />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 404 Sayfası */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Router>
+              {/* 404 Sayfası */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

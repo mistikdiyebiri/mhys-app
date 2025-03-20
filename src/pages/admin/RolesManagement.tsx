@@ -68,6 +68,30 @@ const RolesManagement: React.FC = () => {
   // Rolleri yükle
   useEffect(() => {
     loadRoles();
+    
+    // Test için özel bir rol oluşturalım - sadece bir kere çalışacak
+    const testSpecialRole = async () => {
+      const allRoles = roleService.getAllRoles();
+      // Özel test rolü zaten var mı kontrol et
+      const testRoleExists = allRoles.some(role => role.id === 'test_role' || role.name === 'Test Özel Rolü');
+      
+      if (!testRoleExists) {
+        // Test için özel bir rol oluştur (sistem rolü değil)
+        const testRoleData = {
+          name: 'Test Özel Rolü',
+          description: 'Bu özel bir test rolüdür. Silinebilir.',
+          permissions: [
+            PagePermission.DASHBOARD,
+            PagePermission.TICKETS,
+            PagePermission.TICKET_VIEW,
+          ]
+        };
+        roleService.createRole(testRoleData);
+        loadRoles(); // Rol listesini güncelle
+      }
+    };
+    
+    testSpecialRole();
   }, []);
   
   // Rolleri yükleme fonksiyonu
@@ -226,27 +250,61 @@ const RolesManagement: React.FC = () => {
     }
   };
   
-  // Rol silme
+  // Rol silme fonksiyonu
   const handleDeleteRole = (role: Role) => {
-    if (window.confirm(`${role.name} rolünü silmek istediğinizden emin misiniz?`)) {
+    // Parametrenin geçerli olduğunu kontrol et
+    if (!role || !role.id) {
+      setError('Geçersiz rol. Silme işlemi yapılamıyor.');
+      return;
+    }
+    
+    // Sistem rollerini silmeye çalışmayı engelle
+    if (role.isSystem) {
+      setError(`"${role.name}" bir sistem rolüdür ve silinemez!`);
+      
+      // 3 saniye sonra hata mesajını temizle
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+      
+      return;
+    }
+    
+    // Kullanıcıya onay sor
+    if (window.confirm(`"${role.name}" rolünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
       try {
-        const isDeleted = roleService.deleteRole(role.id);
+        // Role servisinden silme işlemini çağır
+        const result = roleService.deleteRole(role.id);
         
-        if (isDeleted) {
+        // Silme başarılı mı kontrol et
+        if (result) {
+          // Başarılı mesajı göster
           setSuccessMessage(`"${role.name}" rolü başarıyla silindi.`);
-          loadRoles();
+          
+          // 3 saniye sonra başarı mesajını temizle
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 3000);
+          
+          // Rol listesini güncelle - doğrudan servisten al
+          setRoles(roleService.getAllRoles());
         } else {
-          setError('Sistem rolü silinemez.');
+          // Silme başarısız ise hata mesajı göster
+          setError(`"${role.name}" rolü silinirken bir hata oluştu. Rol bulunamadı veya bir sistem rolü.`);
+          
+          // 3 saniye sonra hata mesajını temizle
+          setTimeout(() => {
+            setError(null);
+          }, 3000);
         }
       } catch (error) {
-        console.error('Rol silinirken hata:', error);
-        setError('Rol silinirken bir hata oluştu.');
-      }
-      
-      // Başarı mesajını 3 saniye sonra temizle
-      if (successMessage) {
+        // Hata durumunda konsola bilgi ve kullanıcıya hata mesajı göster
+        console.error('Rol silme işlemi sırasında hata:', error);
+        setError('Rol silinirken teknik bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+        
+        // 3 saniye sonra hata mesajını temizle
         setTimeout(() => {
-          setSuccessMessage(null);
+          setError(null);
         }, 3000);
       }
     }
@@ -282,14 +340,26 @@ const RolesManagement: React.FC = () => {
         </PermissionGuard>
       </Box>
       
+      {/* Hata Mesajı */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 2, animation: 'fadeIn 0.5s' }} 
+          onClose={() => setError(null)}
+          variant="filled"
+        >
           {error}
         </Alert>
       )}
       
+      {/* Başarı Mesajı */}
       {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
+        <Alert 
+          severity="success" 
+          sx={{ mb: 2, animation: 'fadeIn 0.5s' }} 
+          onClose={() => setSuccessMessage(null)}
+          variant="filled"
+        >
           {successMessage}
         </Alert>
       )}
@@ -340,15 +410,25 @@ const RolesManagement: React.FC = () => {
                     </IconButton>
                   </PermissionGuard>
                   
-                  <PermissionGuard permission={PagePermission.ROLE_DELETE}>
-                    <IconButton 
-                      color="error" 
-                      onClick={() => handleDeleteRole(role)}
-                      disabled={role.isSystem || (userRole !== 'admin' && role.id === 'admin')}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </PermissionGuard>
+                  {/* Sil butonu - doğrudan erişim */}
+                  <Tooltip title={role.isSystem ? "Sistem rolleri silinemez" : "Bu rolü sil"}>
+                    <span>
+                      <IconButton 
+                        color="error" 
+                        onClick={() => handleDeleteRole(role)}
+                        disabled={role.isSystem || (userRole !== 'admin' && role.id === 'admin')}
+                        sx={{ 
+                          opacity: role.isSystem ? 0.5 : 1,
+                          '&:hover': { 
+                            bgcolor: role.isSystem ? 'transparent' : 'error.light',
+                            '& svg': { color: role.isSystem ? 'inherit' : '#fff' }
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}

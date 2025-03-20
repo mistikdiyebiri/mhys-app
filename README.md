@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # MHYS - Müşteri Hizmet Yönetim Sistemi
 
 Bu proje, müşteri hizmetleri yönetim sistemi olarak geliştirilmiştir. Sistem, müşteri sorunlarını takip etme, çözme ve raporlama yeteneklerine sahiptir.
@@ -54,52 +53,102 @@ Projeyi AWS Amplify'a yüklemek için:
 5. Deploy tuşuna basın
 
 Not: Gerçek bir uygulamada, `aws-exports.js` dosyasındaki mock değerler yerine gerçek AWS Cognito kimlik doğrulama bilgilerinizi kullanmanız gerekir.
-=======
-# MHYS - Müşteri Hizmetleri Yönetim Sistemi
 
-Bu proje, müşteri hizmetleri süreçlerini yönetmek için geliştirilmiş bir web uygulamasıdır.
+# MHYS E-posta Tabanlı Destek Sistemi
 
-## Özellikler
+## Genel Bakış
 
-- Müşteri destek taleplerinin takibi
-- Personel ve admin rolleri için ayrı panel
-- Müşteriler için özel portal
-- AWS Amplify ile authentication
-- Mock mod ile geliştirme kolaylığı
+Bu sistem, MHYS uygulamasına e-posta tabanlı bir destek ticket sistemi entegre eder. Müşteriler belirlenmiş e-posta adreslerine gönderdikleri e-postalar ile otomatik olarak ticket oluşturabilir, ve bu ticketlara gelen yanıtlar e-posta olarak alabilirler.
 
-## Geliştirme Ortamı
+## Sistem Bileşenleri
 
-Projeyi geliştirme ortamında çalıştırmak için:
+1. **E-posta Ayarları Sayfası**: Admin panelinde e-posta ayarlarını yönetmek için bir arayüz.
+2. **AWS Amplify Entegrasyonu**: E-postaları işlemek için Lambda fonksiyonları ve SES konfigürasyonu.
+3. **Ticket<->E-posta Entegrasyonu**: Ticketlar ve e-postalar arasında çift yönlü iletişim.
+
+## Kurulum Adımları
+
+### 1. AWS SES (Simple Email Service) Kurulumu
+
+1. AWS konsolunda SES servisine gidin.
+2. İlgili domainlerinizi veya e-posta adreslerinizi doğrulayın.
+3. Rule Set oluşturun ve aşağıdaki eylemleri ekleyin:
+   - Gelen e-postayı S3 bucket'a kaydet
+   - Lambda fonksiyonunu tetikle
+
+### 2. AWS Amplify Kurulum ve Konfigürasyon
 
 ```bash
-# Bağımlılıkları yükleyin
-npm install
+# Amplify CLI'ı yükleyin (eğer yoksa)
+npm install -g @aws-amplify/cli
 
-# Uygulamayı başlatın
-npm start
+# Amplify projesini başlatın
+amplify init
+
+# E-posta işleme fonksiyonu ekleyin
+amplify add function
+# Sorulara şu şekilde yanıt verin:
+# - Function name: processEmailToTicket
+# - Runtime: NodeJS
+# - Template: Hello World
+
+# Depolama ekleyin (e-posta ve ekler için)
+amplify add storage
+# Sorulara şu şekilde yanıt verin:
+# - Service: S3
+# - Bucket name: mhys-emails
+# - Access: Auth and guest users
+
+# Değişiklikleri uygulayın
+amplify push
 ```
 
-Uygulama varsayılan olarak http://localhost:3000 adresinde çalışacaktır.
+### 3. Uygulamaya Entegrasyon
 
-## AWS Amplify Deployment
+Aşağıdaki bileşenler sisteme eklenmiştir:
 
-Bu proje AWS Amplify ile deploy edilmek üzere yapılandırılmıştır.
+1. **E-posta Ayarları Sayfası**: `/admin/email-settings`
+2. **E-posta Servis Katmanı**: `src/services/EmailService.ts`
+3. **Ticket Detay Görünümünde E-posta Bilgileri**: Ticket e-posta ile oluşturulduysa e-posta bilgileri gösterilir
+4. **E-posta Yanıtlama Özelliği**: Ticket yanıtları e-posta olarak da gönderilebilir
 
-### Deploy Adımları
+## Kullanım
 
-1. GitHub reposunu AWS Amplify'a bağlayın
-2. Build ayarlarında `amplify.yml` dosyasını seçin
-3. Deploy tuşuna basın
+### 1. E-posta Yapılandırması
 
-### Mock Kimlik Doğrulama
+1. Admin olarak giriş yapın
+2. "E-posta Ayarları" menüsüne gidin
+3. "Yeni E-posta Ekle" butonu ile e-posta yapılandırması ekleyin:
+   - E-posta adresi (örn: destek@pazmanya.com)
+   - Açıklama
+   - Departman (Genel, Teknik, Satış vb.)
+   - Aktif/Pasif durumu
 
-Geliştirme aşamasında, gerçek AWS Cognito yerine mock kimlik doğrulama kullanılmaktadır. Aşağıdaki test kullanıcılarıyla giriş yapabilirsiniz:
+### 2. E-posta ile Ticket Oluşturma
 
-- **Admin:** Email: admin@mhys.com, Şifre: Admin123!
-- **Personel:** Email: personel@mhys.com, Şifre: Personel123!
-- **Müşteri:** Email: musteri@firma.com, Şifre: Musteri123!
+Müşteriler sistemde yapılandırılmış herhangi bir e-posta adresine mail göndererek otomatik ticket oluşturabilirler:
 
-## Not
+1. Müşteri `destek@pazmanya.com` adresine e-posta gönderir
+2. Sistem e-postayı alır ve S3'e kaydeder
+3. Lambda fonksiyonu tetiklenir ve e-postayı işler
+4. Yeni bir ticket oluşturulur ve DynamoDB'ye kaydedilir
 
-Uygulamanın gerçek bir AWS Cognito entegrasyonu için `src/aws-exports.js` dosyasındaki yapılandırmayı gerçek AWS kimlik bilgileriyle değiştirmeniz gerekir.
->>>>>>> 3f01a75bd9bfaddb084189284105bf321f1d0d9c
+### 3. E-posta Olarak Yanıt Gönderme
+
+1. Admin panelinde ticket detaylarını görüntüleyin
+2. Yanıt oluştururken "E-posta Olarak da Gönder" seçeneğini işaretleyin
+3. Gönder butonuna tıklayın
+4. Sistem yanıtı hem ticket'a ekler hem de e-posta olarak müşteriye gönderir
+
+## Güvenlik Önerileri
+
+1. AWS SES sandbox modundan çıkış için AWS desteğine başvurun
+2. E-posta filtreleme için SES gelen kutusu kurallarını yapılandırın
+3. DKIM ve SPF kayıtlarını yapılandırın
+4. Admin arayüzüne erişimi kısıtlayın
+
+## Troubleshooting
+
+1. **E-posta gönderme sorunları**: AWS SES kontrol panelinde gönderim istatistiklerini kontrol edin
+2. **Lambda hataları**: CloudWatch Logs'ta Lambda fonksiyonu loglarını inceleyin
+3. **S3 erişim sorunları**: Bucket izinlerini kontrol edin

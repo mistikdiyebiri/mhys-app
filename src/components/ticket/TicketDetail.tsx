@@ -51,6 +51,7 @@ import { Ticket, TicketComment, TicketStatus, TicketPriority, TicketCategory, Up
 import GeminiAssistant from './GeminiAssistant';
 import { alpha } from '@mui/material/styles';
 import { geminiService } from '../../services/GeminiService';
+import quickReplyService, { QuickReply } from '../../services/QuickReplyService';
 
 // Tab paneli içeriği için ara bileşen
 interface TabPanelProps {
@@ -71,7 +72,7 @@ const TabPanel = (props: TabPanelProps) => {
       {...other}
     >
       {value === index && (
-        <Box sx={{ pt: 2 }}>
+        <Box sx={{ pt: 0 }}>
           {children}
         </Box>
       )}
@@ -165,30 +166,6 @@ const getPriorityLabel = (priority: TicketPriority) => {
   }
 };
 
-// Sık kullanılan yanıtlar
-const quickReplies = [
-  {
-    title: "Teşekkür mesajı",
-    text: "Talebiniz için teşekkür ederiz. En kısa sürede inceleyip size dönüş yapacağız."
-  },
-  {
-    title: "İşleme alındı",
-    text: "Talebiniz işleme alınmıştır. Konuyla ilgili çalışmalarımız devam etmektedir."
-  },
-  {
-    title: "Ek bilgi talebi",
-    text: "Talebinizle ilgili daha detaylı bilgiye ihtiyacımız var. Lütfen aşağıdaki bilgileri paylaşır mısınız?\n\n1. Sorunu ne zaman fark ettiniz?\n2. Sorun hangi durumlarda ortaya çıkıyor?\n3. Daha önce benzer bir sorun yaşadınız mı?"
-  },
-  {
-    title: "Çözüm bildirisi",
-    text: "Talebiniz çözümlenmiştir. Sorun [ÇÖZÜM AÇIKLAMASI] şeklinde giderilmiştir. Başka bir sorunla karşılaşırsanız lütfen bize bildirin."
-  },
-  {
-    title: "Tahmini süre",
-    text: "Talebiniz değerlendirme aşamasındadır. Tahmini çözüm süresi 24-48 saat içerisindedir. Anlayışınız için teşekkür ederiz."
-  }
-];
-
 interface TicketDetailProps {
   ticketId: string;
   userId: string;
@@ -217,10 +194,21 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
   const [tabValue, setTabValue] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const textFieldRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | ''>('');
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+  
+  // Otomatik anahtar kelime etiketlerini engellemek için CSS stillerini ekleyelim
+  const preventAutoKeywordStyles = {
+    // Sadece bilet başlığının altındaki ilk paper bileşenindeki etiketleri hedefle
+    '& .MuiPaper-root:first-of-type .MuiChip-root:nth-of-type(n+4)': { 
+      display: 'none' // İlk 3 etiket dışındaki tüm etiketleri gizle (durum, öncelik, kategori dışındakiler)
+    }
+  };
   
   const isStaff = userRole === 'admin' || userRole === 'employee';
   
@@ -228,6 +216,21 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
+
+  // Hazır yanıtları yükle
+  useEffect(() => {
+    if (isStaff) {
+      setQuickRepliesLoading(true);
+      try {
+        const replies = quickReplyService.getQuickReplies();
+        setQuickReplies(replies);
+      } catch (error) {
+        console.error('Hazır yanıtlar yüklenirken hata oluştu:', error);
+      } finally {
+        setQuickRepliesLoading(false);
+      }
+    }
+  }, [isStaff]);
 
   // Bilet ve yorumları yükle
   useEffect(() => {
@@ -256,6 +259,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
     
     loadTicketData();
   }, [ticketId, isStaff]);
+
+  // Yeni mesaj eklendiğinde mesaj alanını otomatik kaydır
+  useEffect(() => {
+    if (messagesContainerRef.current && comments.length > 0) {
+      const scrollContainer = messagesContainerRef.current;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  }, [comments]);
 
   // Yorum ekleme
   const handleAddComment = () => {
@@ -332,6 +343,45 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
       console.error('Durum güncellenirken hata oluştu:', error);
     } finally {
       setStatusUpdateLoading(false);
+    }
+  };
+
+  // Bileti kapat fonksiyonu (Yeni eklenecek)
+  const handleCloseTicket = async () => {
+    if (!ticket || ticket.status === TicketStatus.CLOSED) return;
+    
+    if (window.confirm("Bu bileti kapatmak istediğinizden emin misiniz?")) {
+      setStatusUpdateLoading(true);
+      try {
+        const updateRequest: UpdateTicketRequest = {
+          status: TicketStatus.CLOSED
+        };
+        
+        const updatedTicket = await ticketService.updateTicket(ticketId, updateRequest);
+        if (updatedTicket) {
+          setTicket(updatedTicket);
+          setSelectedStatus(TicketStatus.CLOSED);
+          
+          // Bileti kapatan yorum ekle
+          const closeComment = await ticketService.addComment(
+            ticketId,
+            userId,
+            "Bu bilet personel tarafından kapatılmıştır.",
+            true // Dahili not olarak ekle
+          );
+          
+          setComments(prev => [...prev, closeComment]);
+          setSuccessMessage("Bilet başarıyla kapatıldı.");
+          
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Bilet kapatılırken hata oluştu:', error);
+      } finally {
+        setStatusUpdateLoading(false);
+      }
     }
   };
 
@@ -501,69 +551,99 @@ Yanıt şunları içermeli:
   };
 
   return (
-    <Box>
+    <Box 
+      sx={{ 
+        maxWidth: '100%', 
+        overflowX: 'hidden', 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        overflowY: 'hidden',
+        pr: 1,
+        ...preventAutoKeywordStyles
+      }}
+    >
       {renderSuccessMessage()}
       
-      {/* Bilet Başlığı ve Durum */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+      {/* Bilet Başlığı ve Durum - Daha Kompakt */}
+      <Paper 
+        sx={{ 
+          p: 0.75,
+          mb: 1,
+          borderRadius: '8px',
+          boxShadow: theme => theme.shadows[1],
+          flexShrink: 0
+        }}
+      >
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography variant="h5" gutterBottom>
+            <Typography variant="h6" sx={{ mb: 0.25, fontWeight: 500, fontSize: '1rem' }}>
               #{ticket.id}: {ticket.title}
             </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
+            
+            <Box display="flex" gap={0.75} flexWrap="wrap">
               <Chip 
                 label={getStatusLabel(ticket.status)} 
                 color={getStatusColor(ticket.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                 size="small"
+                sx={{ height: '22px', '& .MuiChip-label': { px: 1, fontSize: '0.7rem' } }}
               />
               <Chip 
                 label={getPriorityLabel(ticket.priority)} 
                 color={getPriorityColor(ticket.priority) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                 size="small"
+                sx={{ height: '22px', '& .MuiChip-label': { px: 1, fontSize: '0.7rem' } }}
               />
               <Chip 
                 label={getCategoryLabel(ticket.category)} 
                 variant="outlined"
                 size="small"
+                sx={{ height: '22px', '& .MuiChip-label': { px: 1, fontSize: '0.7rem' } }}
               />
-              {ticket.tags && ticket.tags.map(tag => (
-                <Chip 
-                  key={tag} 
-                  label={tag} 
-                  variant="outlined" 
-                  size="small" 
-                  color="default"
-                />
-              ))}
             </Box>
           </Box>
           {onClose && (
-            <IconButton onClick={onClose}>
-              <CloseIcon />
+            <IconButton onClick={onClose} size="small" sx={{ p: 0.5 }}>
+              <CloseIcon fontSize="small" />
             </IconButton>
           )}
         </Box>
       </Paper>
       
-      {/* Sekmeler */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      {/* Sekmeler - Daha Kompakt */}
+      <Box sx={{ 
+        borderBottom: 1, 
+        borderColor: 'divider', 
+        mb: 1,
+        flexShrink: 0
+      }}> 
         <Tabs 
           value={tabValue} 
           onChange={handleTabChange} 
           aria-label="ticket detail tabs"
           variant="scrollable"
           scrollButtons="auto"
+          sx={{
+            minHeight: '36px',
+            '& .MuiTab-root': {
+              minHeight: '36px',
+              py: 0.25,
+              fontSize: '0.8rem'
+            },
+            '& .MuiTabs-indicator': {
+              height: '2px'
+            }
+          }}
         >
           <Tab 
-            icon={<ChatBubbleOutlineIcon />} 
+            icon={<ChatBubbleOutlineIcon sx={{ fontSize: '0.9rem' }} />} 
             iconPosition="start" 
             label="Yazışmalar" 
             id="ticket-detail-tab-0" 
             aria-controls="ticket-detail-tabpanel-0" 
           />
           <Tab 
-            icon={<DescriptionIcon />} 
+            icon={<DescriptionIcon sx={{ fontSize: '0.9rem' }} />} 
             iconPosition="start" 
             label="Detaylar" 
             id="ticket-detail-tab-1" 
@@ -571,7 +651,7 @@ Yanıt şunları içermeli:
           />
           {isStaff && (
             <Tab 
-              icon={<PersonIcon />} 
+              icon={<PersonIcon sx={{ fontSize: '0.9rem' }} />} 
               iconPosition="start" 
               label="Atama" 
               id="ticket-detail-tab-2" 
@@ -581,346 +661,592 @@ Yanıt şunları içermeli:
         </Tabs>
       </Box>
       
-      {/* Yazışmalar Sekmesi */}
-      <TabPanel value={tabValue} index={0}>
-        {/* Yorumlar */}
-        <Paper sx={{ p: 2, mb: 3, maxHeight: '400px', overflow: 'auto' }}>
-          {comments.length === 0 ? (
-            <Typography color="text.secondary" align="center" py={3}>
-              Henüz yorum bulunmuyor.
-            </Typography>
-          ) : (
-            <Stack spacing={2}>
-              {comments.map((comment) => (
-                <Box 
-                  key={comment.id} 
-                  sx={{ 
-                    p: 2, 
-                    bgcolor: comment.isInternal ? 'grey.100' : 'background.paper',
-                    borderRadius: 1,
-                    border: theme => `1px solid ${comment.isInternal ? theme.palette.grey[300] : theme.palette.divider}`
-                  }}
-                >
-                  <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: comment.createdBy.includes('admin') ? 'primary.main' : 'secondary.main' }}>
-                        {comment.createdBy.charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Typography variant="subtitle2">
-                        {comment.createdBy}
-                        {comment.isInternal && (
-                          <Tooltip title="Dahili Not">
-                            <LockIcon fontSize="small" color="action" sx={{ ml: 1, verticalAlign: 'middle' }} />
-                          </Tooltip>
-                        )}
+      {/* Tab İçerikleri */}
+      <Box sx={{ 
+        flex: 1, 
+        overflowY: 'hidden', // Sayfa seviyesinde kaydırmayı devre dışı bırak
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Yazışmalar Sekmesi */}
+        <TabPanel value={tabValue} index={0}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+            gap: 1.5,
+            overflowY: 'hidden' // Kaydırmayı sadece mesaj konteynerinde etkinleştir
+          }}>
+            {/* Yorumlar - Mesajlaşma Alanı */}
+            <Paper 
+              ref={messagesContainerRef}
+              sx={{ 
+                p: 1.5, 
+                flex: 1,
+                overflow: 'auto', // Bu alanın kaydırılabilir olmasını sağla
+                borderRadius: '8px',
+                boxShadow: theme => theme.shadows[1],
+                minHeight: '300px', 
+                maxHeight: '55vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                scrollBehavior: 'smooth' // Kaydırma animasyonunu yumuşat
+              }}
+            >
+              {comments.length === 0 ? (
+                <Typography color="text.secondary" align="center" py={2}>
+                  Henüz yorum bulunmuyor.
+                </Typography>
+              ) : (
+                <Stack spacing={1} sx={{ 
+                  width: '100%', 
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start',
+                  pb: 1
+                }}>
+                  {comments.map((comment) => (
+                    <Box 
+                      key={comment.id} 
+                      sx={{ 
+                        p: 1,
+                        bgcolor: comment.isInternal ? alpha(theme.palette.grey[200], 0.5) : 'background.paper',
+                        borderRadius: 1,
+                        border: theme => `1px solid ${comment.isInternal ? theme.palette.grey[300] : theme.palette.divider}`,
+                        width: 'auto',
+                        maxWidth: '95%',
+                        alignSelf: comment.createdBy.includes('admin') ? 'flex-end' : 'flex-start',
+                        boxShadow: '0px 1px 2px rgba(0,0,0,0.05)',
+                        '&:hover': {
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.03),
+                          borderColor: theme => alpha(theme.palette.primary.main, 0.2)
+                        },
+                        ml: comment.createdBy.includes('admin') ? 'auto' : 0,
+                        mr: comment.createdBy.includes('admin') ? 0 : 'auto',
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                        <Box display="flex" alignItems="center" gap={0.75}>
+                          <Avatar 
+                            sx={{ 
+                              width: 22,
+                              height: 22,
+                              bgcolor: comment.createdBy.includes('admin') ? 'primary.main' : 'secondary.main',
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            {comment.createdBy.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Typography variant="body2" fontWeight={500} fontSize="0.8rem">
+                            {comment.createdBy}
+                            {comment.isInternal && (
+                              <Tooltip title="Dahili Not">
+                                <LockIcon 
+                                  fontSize="small" 
+                                  color="action" 
+                                  sx={{ ml: 0.5, width: 12, height: 12, verticalAlign: 'middle' }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" fontSize="0.7rem">
+                          {format(new Date(comment.createdAt), 'dd.MM.yyyy HH:mm')}
+                        </Typography>
+                      </Box>
+                      <Typography 
+                        variant="body2" 
+                        whiteSpace="pre-wrap" 
+                        sx={{ 
+                          pl: 3.5,
+                          fontSize: '0.8rem',
+                          lineHeight: 1.4
+                        }}
+                      >
+                        {comment.text}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {format(new Date(comment.createdAt), 'dd.MM.yyyy HH:mm')}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" whiteSpace="pre-wrap" sx={{ pl: 5 }}>
-                    {comment.text}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          )}
-        </Paper>
-        
-        {/* Yorum Ekleme Formu */}
-        <Paper sx={{ p: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="subtitle1">
-              Yanıt Ekle
-            </Typography>
-            
-            <Box>
-              {isStaff && (
-                <Tooltip title={isInternalNote ? "Dahili not (müşteri göremez)" : "Genel yanıt (müşteri görebilir)"}>
-                  <Button
-                    startIcon={isInternalNote ? <LockIcon /> : <LockOpenIcon />}
-                    variant="outlined"
-                    color={isInternalNote ? "warning" : "primary"}
-                    onClick={() => setIsInternalNote(!isInternalNote)}
-                    size="small"
-                    sx={{ mr: 1 }}
-                  >
-                    {isInternalNote ? 'Dahili Not' : 'Genel Yanıt'}
-                  </Button>
-                </Tooltip>
+                  ))}
+                </Stack>
               )}
-              
-              <Tooltip title="Dosya Ekle (Henüz aktif değil)">
-                <span>
-                  <IconButton disabled size="small">
-                    <AttachFileIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </Box>
-          </Box>
-          
-          <Box position="relative">
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Cevabınızı yazın..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              disabled={commentLoading || isGeminiLoading}
-              inputRef={textFieldRef}
-              sx={{ mb: 2 }}
-            />
+            </Paper>
             
-            {isStaff && (
-              <Box position="absolute" bottom={24} right={8} zIndex={1}>
-                <Tooltip title="Gemini AI ile yanıt üret">
-                  <IconButton 
-                    color="secondary" 
-                    size="small" 
-                    onClick={generateAIResponse}
-                    disabled={isGeminiLoading}
+            {/* Yanıt ve Hazır Yanıtlar Bölümü */}
+            <Box sx={{ flexShrink: 0 }}>
+              {/* Yorum Ekleme Formu */}
+              <Paper 
+                sx={{ 
+                  p: 1.5,
+                  borderRadius: '8px',
+                  boxShadow: theme => theme.shadows[1],
+                  mb: 1.5,
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography variant="subtitle2" fontSize="0.9rem" fontWeight={600}>
+                    Yanıt Ekle
+                  </Typography>
+                  
+                  <Box>
+                    {isStaff && (
+                      <Tooltip title={isInternalNote ? "Dahili not (müşteri göremez)" : "Genel yanıt (müşteri görebilir)"}>
+                        <Button
+                          startIcon={isInternalNote ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+                          variant="outlined"
+                          color={isInternalNote ? "warning" : "primary"}
+                          onClick={() => setIsInternalNote(!isInternalNote)}
+                          size="small"
+                          sx={{ 
+                            mr: 0.75,
+                            py: 0.25, 
+                            minHeight: '28px',
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          {isInternalNote ? 'Dahili Not' : 'Genel Yanıt'}
+                        </Button>
+                      </Tooltip>
+                    )}
+                    
+                    <Tooltip title="Dosya Ekle (Henüz aktif değil)">
+                      <span>
+                        <IconButton disabled size="small" sx={{ p: 0.25 }}>
+                          <AttachFileIcon sx={{ fontSize: '1rem' }}/>
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                </Box>
+                
+                <Box position="relative">
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    maxRows={4}
+                    placeholder="Cevabınızı yazın..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    disabled={commentLoading || isGeminiLoading}
+                    inputRef={textFieldRef}
+                    size="small"
                     sx={{ 
-                      bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                      '&:hover': {
-                        bgcolor: alpha(theme.palette.secondary.main, 0.2),
+                      mb: 1.5,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px',
+                        fontSize: '0.85rem'
+                      },
+                      '& .MuiInputBase-inputMultiline': {
+                        lineHeight: 1.5
                       }
                     }}
-                  >
-                    {isGeminiLoading ? (
-                      <CircularProgress size={18} color="secondary" />
-                    ) : (
-                      <SmartToyIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            )}
-          </Box>
-          
-          {aiError && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setAiError(null)}>
-              {aiError}
-            </Alert>
-          )}
-          
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={commentLoading ? <CircularProgress size={16} /> : <SendIcon />}
-              onClick={handleAddComment}
-              disabled={!commentText.trim() || commentLoading || isGeminiLoading}
-            >
-              Gönder
-            </Button>
-          </Box>
-        </Paper>
-        
-        {/* Hazır Yanıtlar Bölümü */}
-        {isStaff && (
-          <Box mt={3}>
-            <Typography variant="subtitle2" gutterBottom>
-              Hazır Yanıtlar
-            </Typography>
-            <Paper variant="outlined" sx={{ p: 1, maxHeight: '150px', overflowY: 'auto' }}>
-              <Grid container spacing={1}>
-                {quickReplies.map((reply, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Tooltip title={reply.text} placement="top">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{ 
-                          textTransform: 'none', 
-                          justifyContent: 'flex-start',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          width: '100%'
-                        }}
-                        onClick={() => handleQuickReplySelect(reply.text)}
-                      >
-                        <FormatListBulletedIcon fontSize="small" sx={{ mr: 1 }} />
-                        {reply.title}
-                      </Button>
-                    </Tooltip>
-                  </Grid>
-                ))}
-              </Grid>
-            </Paper>
-          </Box>
-        )}
-      </TabPanel>
-      
-      {/* Detaylar Sekmesi */}
-      <TabPanel value={tabValue} index={1}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={7}>
-            <Paper sx={{ p: 2, mb: 3 }}>
-              <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                Açıklama
-              </Typography>
-              <Typography paragraph whiteSpace="pre-wrap">
-                {ticket.description}
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} md={5}>
-            <Card variant="outlined" sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>Bilet Bilgileri</Typography>
+                  />
+                </Box>
                 
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Oluşturan</Typography>
-                    <Typography variant="body2">{ticket.createdBy}</Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Oluşturulma Tarihi</Typography>
-                    <Typography variant="body2">
-                      {format(new Date(ticket.createdAt), 'dd.MM.yyyy HH:mm')}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Son Güncelleme</Typography>
-                    <Typography variant="body2">
-                      {format(new Date(ticket.updatedAt), 'dd.MM.yyyy HH:mm')}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Atanan Kişi</Typography>
-                    <Typography variant="body2">
-                      {ticket.assignedTo || 'Henüz kimseye atanmadı'}
-                    </Typography>
-                  </Box>
-                  
+                {aiError && (
+                  <Alert severity="error" sx={{ mb: 1, py: 0.5, fontSize: '0.75rem' }} onClose={() => setAiError(null)}>
+                    {aiError}
+                  </Alert>
+                )}
+                
+                <Box display="flex" justifyContent="flex-end" gap={1}>
                   {isStaff && (
                     <>
-                      <Divider />
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={statusUpdateLoading ? <CircularProgress size={16} color="error" /> : <CloseIcon sx={{ fontSize: '0.9rem' }} />}
+                        onClick={handleCloseTicket}
+                        disabled={statusUpdateLoading || commentLoading || ticket.status === TicketStatus.CLOSED}
+                        size="small"
+                        sx={{ 
+                          borderRadius: '6px',
+                          py: 0.5,
+                          minWidth: '110px',
+                          fontSize: '0.8rem',
+                          transition: 'all 0.2s ease-in-out',
+                          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1)',
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.error.main, 0.08),
+                            boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.15)',
+                            transform: 'translateY(-1px)'
+                          }
+                        }}
+                      >
+                        {statusUpdateLoading ? 'Kapatılıyor...' : 'Bileti Kapat'}
+                      </Button>
                       
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">Durum</Typography>
-                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                          <Select
-                            value={selectedStatus}
-                            onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
-                            disabled={statusUpdateLoading}
-                          >
-                            <MenuItem value={TicketStatus.OPEN}>Açık</MenuItem>
-                            <MenuItem value={TicketStatus.IN_PROGRESS}>İşleniyor</MenuItem>
-                            <MenuItem value={TicketStatus.WAITING_CUSTOMER}>Yanıt Bekleniyor</MenuItem>
-                            <MenuItem value={TicketStatus.RESOLVED}>Çözüldü</MenuItem>
-                            <MenuItem value={TicketStatus.CLOSED}>Kapatıldı</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Box>
-                      
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">Öncelik</Typography>
-                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                          <Select
-                            value={selectedPriority}
-                            onChange={(e) => handlePriorityChange(e.target.value as TicketPriority)}
-                            disabled={priorityUpdateLoading}
-                          >
-                            <MenuItem value={TicketPriority.LOW}>Düşük</MenuItem>
-                            <MenuItem value={TicketPriority.MEDIUM}>Orta</MenuItem>
-                            <MenuItem value={TicketPriority.HIGH}>Yüksek</MenuItem>
-                            <MenuItem value={TicketPriority.URGENT}>Acil</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Box>
-                      
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">Departmana Ata</Typography>
-                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                          <Select
-                            value={selectedDepartment || ''}
-                            onChange={(e) => setSelectedDepartment(e.target.value)}
-                            disabled={assigneeUpdateLoading}
-                          >
-                            <MenuItem value="">Seçiniz</MenuItem>
-                            <MenuItem value="technical">Teknik Destek</MenuItem>
-                            <MenuItem value="billing">Fatura / Ödeme</MenuItem>
-                            <MenuItem value="customer">Müşteri Hizmetleri</MenuItem>
-                            <MenuItem value="product">Ürün Yönetimi</MenuItem>
-                          </Select>
-                        </FormControl>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          fullWidth
-                          sx={{ mt: 1 }}
-                          onClick={handleAssignToDepartment}
-                          disabled={!selectedDepartment || assigneeUpdateLoading}
-                          startIcon={assigneeUpdateLoading ? <CircularProgress size={16} /> : <AssignmentIndIcon />}
-                        >
-                          Departmana Ata
-                        </Button>
-                      </Box>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        startIcon={isGeminiLoading ? <CircularProgress size={16} color="secondary" /> : <SmartToyIcon sx={{ fontSize: '0.9rem' }} />}
+                        onClick={generateAIResponse}
+                        disabled={isGeminiLoading}
+                        size="small"
+                        sx={{ 
+                          borderRadius: '6px',
+                          py: 0.5,
+                          minWidth: '110px',
+                          fontSize: '0.8rem',
+                          transition: 'all 0.2s ease-in-out',
+                          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1)',
+                          background: isGeminiLoading ? alpha(theme.palette.secondary.main, 0.05) : 'inherit',
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.secondary.main, 0.08),
+                            boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.15)',
+                            transform: 'translateY(-1px)'
+                          }
+                        }}
+                      >
+                        {isGeminiLoading ? 'Üretiliyor...' : 'AI ile Yanıt'}
+                      </Button>
                     </>
                   )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </TabPanel>
-      
-      {/* Atama Sekmesi */}
-      {isStaff && (
-        <TabPanel value={tabValue} index={2}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-              Bilet Ataması
-            </Typography>
-            
-            <Box mt={2}>
-              <Typography variant="caption" color="text.secondary">Atanan Kişi</Typography>
-              <Typography variant="body2" mb={2}>
-                {ticket.assignedTo || 'Henüz kimseye atanmadı'}
-              </Typography>
-              
-              {!ticket.assignedTo && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Departmana Ata</Typography>
-                  <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                    <Select
-                      value={selectedDepartment || ''}
-                      onChange={(e) => setSelectedDepartment(e.target.value)}
-                      disabled={assigneeUpdateLoading}
-                    >
-                      <MenuItem value="">Seçiniz</MenuItem>
-                      <MenuItem value="technical">Teknik Destek</MenuItem>
-                      <MenuItem value="billing">Fatura / Ödeme</MenuItem>
-                      <MenuItem value="customer">Müşteri Hizmetleri</MenuItem>
-                      <MenuItem value="product">Ürün Yönetimi</MenuItem>
-                    </Select>
-                  </FormControl>
+                  
                   <Button
                     variant="contained"
                     color="primary"
-                    fullWidth
-                    sx={{ mt: 1 }}
-                    onClick={handleAssignToDepartment}
-                    disabled={!selectedDepartment || assigneeUpdateLoading}
-                    startIcon={assigneeUpdateLoading ? <CircularProgress size={16} /> : <AssignmentIndIcon />}
+                    startIcon={commentLoading ? <CircularProgress size={16} /> : <SendIcon sx={{ fontSize: '0.9rem' }} />}
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim() || commentLoading || isGeminiLoading}
+                    size="small"
+                    sx={{ 
+                      borderRadius: '6px',
+                      py: 0.5,
+                      minWidth: '110px',
+                      fontSize: '0.8rem',
+                      boxShadow: 1,
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        boxShadow: 2,
+                        transform: 'translateY(-1px)'
+                      }
+                    }}
                   >
-                    Departmana Ata
+                    {commentLoading ? 'Gönderiliyor...' : 'Gönder'}
                   </Button>
                 </Box>
+              </Paper>
+              
+              {/* Hazır Yanıtlar Bölümü */}
+              {isStaff && (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 1.25,
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    borderRadius: '8px',
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                    background: alpha(theme.palette.primary.main, 0.03),
+                  }}
+                >
+                  <Box display="flex" alignItems="center" mb={0.75}>
+                    <Typography variant="subtitle2" sx={{ mb: 0, fontSize: '0.85rem', fontWeight: 600 }}>
+                      <FormatListBulletedIcon sx={{ mr: 0.5, fontSize: '1rem', verticalAlign: 'text-bottom' }} />
+                      Hazır Yanıtlar
+                    </Typography>
+                  </Box>
+                  
+                  {quickRepliesLoading ? (
+                    <Box display="flex" justifyContent="center" p={0.5}>
+                      <CircularProgress size={16} />
+                    </Box>
+                  ) : quickReplies.length === 0 ? (
+                    <Typography color="text.secondary" align="center" fontSize="0.75rem" py={0.5}>
+                      Henüz hazır yanıt eklenmemiş.
+                    </Typography>
+                  ) : (
+                    <Grid container spacing={1}>
+                      {quickReplies.map((reply) => (
+                        <Grid item xs={6} md={4} key={reply.id}>
+                          <Tooltip title={reply.text} placement="top">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              sx={{ 
+                                textTransform: 'none', 
+                                justifyContent: 'flex-start',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                width: '100%',
+                                py: 0.5,
+                                px: 1,
+                                fontSize: '0.8rem',
+                                borderColor: alpha(theme.palette.primary.main, 0.3),
+                                '&:hover': {
+                                  borderColor: theme.palette.primary.main,
+                                  bgcolor: alpha(theme.palette.primary.main, 0.08)
+                                }
+                              }}
+                              onClick={() => handleQuickReplySelect(reply.text)}
+                            >
+                              <FormatListBulletedIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                              {reply.title}
+                            </Button>
+                          </Tooltip>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Paper>
               )}
             </Box>
-          </Paper>
+          </Box>
         </TabPanel>
-      )}
+        
+        {/* Detaylar Sekmesi */}
+        <TabPanel value={tabValue} index={1}>
+          <Box sx={{ height: '100%', overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Grid container spacing={1.5} sx={{ maxHeight: '70vh' }}>
+              <Grid item xs={12} md={7}>
+                <Paper 
+                  sx={{ 
+                    p: 1.5,
+                    mb: { xs: 1.5, md: 0 },
+                    borderRadius: '8px',
+                    boxShadow: theme => theme.shadows[1]
+                  }}
+                >
+                  <Typography variant="subtitle2" gutterBottom fontSize="0.9rem">
+                    Açıklama
+                  </Typography>
+                  
+                  <Typography 
+                    paragraph 
+                    whiteSpace="pre-wrap" 
+                    variant="body2"
+                    sx={{ 
+                      mb: 0,
+                      fontSize: '0.85rem',
+                      lineHeight: 1.5,
+                      backgroundColor: alpha(theme.palette.background.default, 0.5),
+                      p: 1,
+                      borderRadius: 1,
+                      border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+                      maxHeight: '350px', // Artırdım
+                      overflow: 'auto'
+                    }}
+                  >
+                    {ticket.description}
+                  </Typography>
+                </Paper>
+              </Grid>
+              
+              <Grid item xs={12} md={5}>
+                <Paper 
+                  sx={{ 
+                    p: 1.5,
+                    borderRadius: '8px',
+                    boxShadow: theme => theme.shadows[1]
+                  }}
+                >
+                  <Typography variant="subtitle2" gutterBottom fontSize="0.9rem">Bilet Bilgileri</Typography>
+                  
+                  <Stack spacing={1}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      p: 0.75, 
+                      bgcolor: alpha(theme.palette.background.default, 0.5),
+                      borderRadius: 1
+                    }}>
+                      <Typography variant="caption" color="text.secondary" fontSize="0.75rem" sx={{ width: '40%' }}>Oluşturan</Typography>
+                      <Typography variant="body2" fontSize="0.85rem" sx={{ width: '60%', fontWeight: 500 }}>{ticket.createdBy}</Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      p: 0.75, 
+                      bgcolor: alpha(theme.palette.background.default, 0.5),
+                      borderRadius: 1
+                    }}>
+                      <Typography variant="caption" color="text.secondary" fontSize="0.75rem" sx={{ width: '40%' }}>Oluşturulma Tarihi</Typography>
+                      <Typography variant="body2" fontSize="0.85rem" sx={{ width: '60%', fontWeight: 500 }}>
+                        {format(new Date(ticket.createdAt), 'dd.MM.yyyy HH:mm')}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      p: 0.75, 
+                      bgcolor: alpha(theme.palette.background.default, 0.5),
+                      borderRadius: 1
+                    }}>
+                      <Typography variant="caption" color="text.secondary" fontSize="0.75rem" sx={{ width: '40%' }}>Son Güncelleme</Typography>
+                      <Typography variant="body2" fontSize="0.85rem" sx={{ width: '60%', fontWeight: 500 }}>
+                        {format(new Date(ticket.updatedAt), 'dd.MM.yyyy HH:mm')}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      p: 0.75, 
+                      bgcolor: alpha(theme.palette.background.default, 0.5),
+                      borderRadius: 1
+                    }}>
+                      <Typography variant="caption" color="text.secondary" fontSize="0.75rem" sx={{ width: '40%' }}>Atanan Kişi</Typography>
+                      <Typography variant="body2" fontSize="0.85rem" sx={{ width: '60%', fontWeight: 500 }}>
+                        {ticket.assignedTo || 'Henüz kimseye atanmadı'}
+                      </Typography>
+                    </Box>
+                    
+                    {isStaff && (
+                      <>
+                        <Divider sx={{ my: 0.5 }} />
+                        
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" fontSize="0.75rem">Durum</Typography>
+                          <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
+                            <Select
+                              value={selectedStatus}
+                              onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
+                              disabled={statusUpdateLoading}
+                              sx={{ fontSize: '0.85rem' }}
+                            >
+                              <MenuItem value={TicketStatus.OPEN}>Açık</MenuItem>
+                              <MenuItem value={TicketStatus.IN_PROGRESS}>İşleniyor</MenuItem>
+                              <MenuItem value={TicketStatus.WAITING_CUSTOMER}>Yanıt Bekleniyor</MenuItem>
+                              <MenuItem value={TicketStatus.RESOLVED}>Çözüldü</MenuItem>
+                              <MenuItem value={TicketStatus.CLOSED}>Kapatıldı</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Box>
+                        
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" fontSize="0.75rem">Öncelik</Typography>
+                          <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
+                            <Select
+                              value={selectedPriority}
+                              onChange={(e) => handlePriorityChange(e.target.value as TicketPriority)}
+                              disabled={priorityUpdateLoading}
+                              sx={{ fontSize: '0.85rem' }}
+                            >
+                              <MenuItem value={TicketPriority.LOW}>Düşük</MenuItem>
+                              <MenuItem value={TicketPriority.MEDIUM}>Orta</MenuItem>
+                              <MenuItem value={TicketPriority.HIGH}>Yüksek</MenuItem>
+                              <MenuItem value={TicketPriority.URGENT}>Acil</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Box>
+                      </>
+                    )}
+                  </Stack>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        </TabPanel>
+        
+        {/* Atama Sekmesi */}
+        {isStaff && (
+          <TabPanel value={tabValue} index={2}>
+            <Paper 
+              sx={{ 
+                p: 0.75,
+                borderRadius: '8px',
+                boxShadow: theme => theme.shadows[1]
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontSize: '0.85rem', mb: 0.5 }}>
+                Bilet Ataması
+              </Typography>
+              
+              <Box sx={{ 
+                p: 0.75, 
+                bgcolor: alpha(theme.palette.background.default, 0.5),
+                borderRadius: 1,
+                border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+                mb: 1
+              }}>
+                <Grid container spacing={0.5}>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="text.secondary" fontSize="0.7rem">Mevcut Durum</Typography>
+                    <Typography variant="body2" fontSize="0.78rem" fontWeight={500} mb={0.5}>
+                      {ticket.assignedTo ? (
+                        <>
+                          <CheckIcon fontSize="small" color="success" sx={{ 
+                            fontSize: '0.75rem', 
+                            verticalAlign: 'middle',
+                            mr: 0.5
+                          }} />
+                          {ticket.assignedTo}
+                        </>
+                      ) : (
+                        <>
+                          <CloseIcon fontSize="small" color="error" sx={{ 
+                            fontSize: '0.75rem', 
+                            verticalAlign: 'middle',
+                            mr: 0.5
+                          }} />
+                          Henüz atama yapılmadı
+                        </>
+                      )}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={8}>
+                    <Typography variant="caption" color="text.secondary" fontSize="0.7rem">Departman Seçin</Typography>
+                    <FormControl fullWidth size="small" sx={{ mt: 0.25 }}>
+                      <Select
+                        value={selectedDepartment || ''}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        disabled={assigneeUpdateLoading}
+                        sx={{ fontSize: '0.78rem' }}
+                      >
+                        <MenuItem value="">Seçiniz</MenuItem>
+                        <MenuItem value="technical">Teknik Destek</MenuItem>
+                        <MenuItem value="billing">Fatura / Ödeme</MenuItem>
+                        <MenuItem value="customer">Müşteri Hizmetleri</MenuItem>
+                        <MenuItem value="product">Ürün Yönetimi</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Box>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                sx={{ 
+                  mt: 0.25,
+                  py: 0.5,
+                  fontSize: '0.78rem'
+                }}
+                onClick={handleAssignToDepartment}
+                disabled={!selectedDepartment || assigneeUpdateLoading}
+                startIcon={assigneeUpdateLoading ? <CircularProgress size={14} /> : <AssignmentIndIcon sx={{ fontSize: '0.9rem' }} />}
+                size="small"
+              >
+                {assigneeUpdateLoading ? 'Atama Yapılıyor...' : 'Departmana Ata'}
+              </Button>
+              
+              {/* Bilet Yönetimi İpuçları */}
+              <Paper
+                variant="outlined"
+                sx={{ 
+                  mt: 1.5, 
+                  p: 0.75, 
+                  bgcolor: alpha(theme.palette.info.main, 0.05),
+                  borderRadius: '8px',
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                }}
+              >
+                <Typography variant="subtitle2" fontSize="0.8rem" color="info.main" gutterBottom>
+                  <LightbulbIcon sx={{ fontSize: '0.9rem', mr: 0.5, verticalAlign: 'text-bottom' }} />
+                  İpuçları
+                </Typography>
+                <Typography variant="body2" fontSize="0.75rem" color="text.secondary">
+                  • Biletleri ilgili departmanlara atamak, çözüm sürecini hızlandırır.<br />
+                  • Bilet atandıktan sonra, bilet durumu otomatik olarak "İşleniyor" olarak güncellenir.<br />
+                  • Atama sonrası bilet hakkında bir dahili not oluşturulur.
+                </Typography>
+              </Paper>
+            </Paper>
+          </TabPanel>
+        )}
+      </Box>
     </Box>
   );
 };

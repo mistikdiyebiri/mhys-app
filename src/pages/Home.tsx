@@ -31,10 +31,10 @@ const Home: React.FC = () => {
       >
         <Container maxWidth="md">
           <Typography variant="h2" component="h1" gutterBottom>
-            Müşteri Hizmetleri Platformu
+            MHYS - Müşteri Hizmet Yönetim Sistemi
           </Typography>
           <Typography variant="h5" component="h2" gutterBottom>
-            7/24 size destek olmak için buradayız
+            Müşteri taleplerinizi yönetmek hiç bu kadar kolay olmamıştı!
           </Typography>
           <Box mt={4}>
             <Button 
@@ -125,6 +125,53 @@ const Home: React.FC = () => {
           </Grid>
         </Grid>
       </Container>
+
+      {/* İstatistikler Bölümü */}
+      <Box sx={{ bgcolor: theme.palette.primary.light, color: 'white', py: 6 }}>
+        <Container maxWidth="lg">
+          <Typography variant="h3" component="h2" gutterBottom align="center" mb={4}>
+            MHYS İstatistikleri
+          </Typography>
+          
+          <Grid container spacing={4} justifyContent="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <Box textAlign="center">
+                <Typography variant="h2" component="p" fontWeight="bold">
+                  1500+
+                </Typography>
+                <Typography variant="h6">Mutlu Müşteri</Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Box textAlign="center">
+                <Typography variant="h2" component="p" fontWeight="bold">
+                  98%
+                </Typography>
+                <Typography variant="h6">Çözüm Oranı</Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Box textAlign="center">
+                <Typography variant="h2" component="p" fontWeight="bold">
+                  24/7
+                </Typography>
+                <Typography variant="h6">Destek</Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Box textAlign="center">
+                <Typography variant="h2" component="p" fontWeight="bold">
+                  10+
+                </Typography>
+                <Typography variant="h6">Yıllık Deneyim</Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
 
       {/* Footer */}
       <Box sx={{ bgcolor: 'grey.200', py: 6, mt: 8 }}>

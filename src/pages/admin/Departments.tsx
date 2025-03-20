@@ -287,10 +287,7 @@ const Departments: React.FC = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Departmanlar
-        </Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
         <Box>
           <Button 
             variant="contained" 

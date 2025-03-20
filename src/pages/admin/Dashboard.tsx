@@ -4,9 +4,6 @@ import { styled, useTheme, Theme } from '@mui/material/styles';
 import {
   Box,
   Drawer,
-  AppBar,
-  Toolbar,
-  List,
   CssBaseline,
   Typography,
   Divider,
@@ -15,9 +12,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Avatar,
-  Menu,
-  MenuItem,
+  List,
   Tooltip
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -32,10 +27,13 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SecurityIcon from '@mui/icons-material/Security';
-import ChatIcon from '@mui/icons-material/Chat';
+import TextsmsIcon from '@mui/icons-material/Textsms';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import EmailIcon from '@mui/icons-material/Email';
 import { useAuth } from '../../contexts/AuthContext';
 import { PagePermission } from '../../models/Role';
 import PermissionGuard from '../../components/PermissionGuard';
+import { NotificationButton } from '../../components/NotificationPopover';
 
 // Alt sayfalar (lazy-loaded)
 // @ts-ignore
@@ -56,6 +54,10 @@ const GeminiSettings = React.lazy(() => import('./GeminiSettings'));
 const RolesManagement = React.lazy(() => import('./RolesManagement'));
 // @ts-ignore
 const QuickReplySettings = React.lazy(() => import('./QuickReplySettings'));
+// @ts-ignore
+const Notifications = React.lazy(() => import('./Notifications'));
+// @ts-ignore
+const EmailSettings = React.lazy(() => import('./EmailSettings'));
 
 const drawerWidth = 240;
 
@@ -83,31 +85,10 @@ const closedMixin = (theme: Theme) => ({
 const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
+  justifyContent: 'space-between',
   padding: theme.spacing(0, 1),
   // necessary for content to be below app bar
-  ...theme.mixins.toolbar,
-}));
-
-// @ts-ignore - AppBarStyled tiplerindeki sorunları görmezden gel
-const AppBarStyled = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'open',
-// @ts-ignore - theme parametresi sorunlarını görmezden gel  
-})(({ theme, open }) => ({
-  // theme'in her zaman var olduğunu garantiliyoruz
-  zIndex: (theme as Theme).zIndex.drawer + 1,
-  transition: (theme as Theme).transitions.create(['width', 'margin'], {
-    easing: (theme as Theme).transitions.easing.sharp,
-    duration: (theme as Theme).transitions.duration.leavingScreen,
-  }),
-  ...(open && {
-    marginLeft: drawerWidth,
-    width: `calc(100% - ${drawerWidth}px)`,
-    transition: (theme as Theme).transitions.create(['width', 'margin'], {
-      easing: (theme as Theme).transitions.easing.sharp,
-      duration: (theme as Theme).transitions.duration.enteringScreen,
-    }),
-  }),
+  minHeight: 48,
 }));
 
 // @ts-ignore - DrawerStyled tiplerindeki sorunları görmezden gel
@@ -132,7 +113,6 @@ const DrawerStyled = styled(Drawer, {
 const Dashboard: React.FC = () => {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { logout, getUserAttributes } = useAuth();
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
@@ -160,15 +140,72 @@ const Dashboard: React.FC = () => {
 
   // Menü öğeleri
   const menuItems = [
-    { text: 'Genel Bakış', icon: <DashboardIcon />, path: '/admin/dashboard' },
-    { text: 'Personeller', icon: <PeopleIcon />, path: '/admin/dashboard/employees' },
-    { text: 'Departmanlar', icon: <BusinessIcon />, path: '/admin/dashboard/departments' },
-    { text: 'Destek Talepleri', icon: <SupportAgentIcon />, path: '/admin/dashboard/tickets' },
-    { text: 'Raporlar', icon: <BarChartIcon />, path: '/admin/dashboard/reports' },
-    { text: 'Hazır Yanıtlar', icon: <ChatIcon />, path: '/admin/dashboard/quickreplies' },
-    { text: 'Ayarlar', icon: <SettingsIcon />, path: '/admin/dashboard/settings' },
-    { text: 'Gemini AI', icon: <SmartToyIcon />, path: '/admin/dashboard/gemini-settings' },
-    { text: 'Rol Yönetimi', icon: <SecurityIcon />, path: '/admin/dashboard/roles', permission: PagePermission.ROLE_VIEW },
+    {
+      text: 'Genel Bakış',
+      path: '/admin/dashboard',
+      icon: <DashboardIcon />,
+      permission: undefined // Herkes erişebilir
+    },
+    {
+      text: 'Destek Talepleri',
+      path: '/admin/dashboard/tickets',
+      icon: <SupportAgentIcon />,
+      permission: PagePermission.TICKETS
+    },
+    {
+      text: 'Personel',
+      path: '/admin/dashboard/employees',
+      icon: <PeopleIcon />,
+      permission: PagePermission.EMPLOYEES
+    },
+    {
+      text: 'Departmanlar',
+      path: '/admin/dashboard/departments',
+      icon: <BusinessIcon />,
+      permission: PagePermission.DEPARTMENTS
+    },
+    {
+      text: 'Bildirimler',
+      path: '/admin/dashboard/notifications',
+      icon: <NotificationsIcon />,
+      permission: PagePermission.NOTIFICATIONS
+    },
+    {
+      text: 'Raporlar',
+      path: '/admin/dashboard/reports',
+      icon: <BarChartIcon />,
+      permission: PagePermission.REPORTS
+    },
+    {
+      text: 'Rol Yönetimi',
+      path: '/admin/dashboard/roles',
+      icon: <SecurityIcon />,
+      permission: PagePermission.ROLES
+    },
+    {
+      text: 'E-posta Ayarları',
+      path: '/admin/dashboard/email-settings',
+      icon: <EmailIcon />,
+      permission: PagePermission.SETTINGS
+    },
+    {
+      text: 'Hazır Yanıtlar',
+      path: '/admin/dashboard/quickreplies',
+      icon: <TextsmsIcon />,
+      permission: PagePermission.SETTINGS
+    },
+    {
+      text: 'AI Ayarları',
+      path: '/admin/dashboard/gemini-settings',
+      icon: <SmartToyIcon />,
+      permission: PagePermission.GEMINI_SETTINGS
+    },
+    {
+      text: 'Ayarlar',
+      path: '/admin/dashboard/settings',
+      icon: <SettingsIcon />,
+      permission: PagePermission.SETTINGS
+    }
   ];
 
   const handleDrawerOpen = () => {
@@ -179,17 +216,7 @@ const Dashboard: React.FC = () => {
     setOpen(false);
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleLogout = async () => {
-    handleMenuClose();
-    
     try {
       await logout();
       navigate('/admin');
@@ -207,83 +234,22 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
       <CssBaseline />
-      {/* @ts-ignore */}
-      <AppBarStyled position="fixed" open={open}>
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            onClick={handleDrawerOpen}
-            edge="start"
-            sx={{
-              marginRight: 5,
-              ...(open && { display: 'none' }),
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Müşteri Hizmetleri Yönetim Sistemi
-          </Typography>
-          
-          <Tooltip title="Hesap Ayarları">
-            <IconButton
-              onClick={handleMenuOpen}
-              size="small"
-              sx={{ ml: 2 }}
-              aria-controls={Boolean(anchorEl) ? 'account-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={Boolean(anchorEl) ? 'true' : undefined}
-            >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                {userName.charAt(0)}
-              </Avatar>
-            </IconButton>
-          </Tooltip>
-          
-          <Menu
-            anchorEl={anchorEl}
-            id="account-menu"
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem onClick={handleMenuClose}>
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="subtitle1">{userName}</Typography>
-                <Typography variant="body2" color="text.secondary">{userRole}</Typography>
-              </Box>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleMenuClose} component={Link} to="/admin/dashboard/profile">
-              <ListItemIcon>
-                <Avatar sx={{ width: 24, height: 24 }} />
-              </ListItemIcon>
-              Profilim
-            </MenuItem>
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <ExitToAppIcon fontSize="small" />
-              </ListItemIcon>
-              Çıkış Yap
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBarStyled>
       
       <DrawerStyled variant="permanent" open={open}>
         <DrawerHeader>
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
-            Admin Paneli
+          <Typography variant="h6" sx={{ ml: 2, color: 'primary.main', fontWeight: 600, fontSize: '1rem' }}>
+            Müşteri Hizmetleri
           </Typography>
-          <IconButton onClick={handleDrawerClose}>
-            {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton onClick={open ? handleDrawerClose : handleDrawerOpen}>
+              {open ? (theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />) : <MenuIcon />}
+            </IconButton>
+          </Box>
         </DrawerHeader>
-        <Divider />
+        
+        {/* Ana menü öğeleri */}
         <List>
           {menuItems.map((item) => {
             // İzin kontrolü yaparak menü öğesini göster
@@ -333,11 +299,66 @@ const Dashboard: React.FC = () => {
             return menuItem;
           })}
         </List>
+        
+        {/* Çıkış yapma butonu - En altta ayrı bir bölüm */}
+        <Box sx={{ 
+          mt: 'auto', // Altına yasla
+          borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+          py: 1
+        }}>
+          {open && (
+            <Box sx={{ 
+              px: 2, 
+              py: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between' 
+            }}>
+              <Box>
+                <Typography variant="body2" fontSize="0.7rem" color="text.secondary">
+                  {userRole}
+                </Typography>
+                <Typography variant="body1" fontSize="0.8rem" fontWeight={500}>
+                  {userName}
+                </Typography>
+              </Box>
+              <NotificationButton />
+            </Box>
+          )}
+          
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={handleLogout}
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                  color: 'error.main',
+                }}
+              >
+                <ExitToAppIcon />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Çıkış Yap" 
+                sx={{ 
+                  opacity: open ? 1 : 0,
+                  color: 'error.main', 
+                }} 
+              />
+            </ListItemButton>
+          </ListItem>
+        </Box>
       </DrawerStyled>
       
       {/* Ana içerik */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-        <DrawerHeader />
+      <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <React.Suspense fallback={<div>Yükleniyor...</div>}>
           <Routes>
             <Route path="/" element={<Overview />} />
@@ -348,6 +369,7 @@ const Dashboard: React.FC = () => {
             <Route path="/settings" element={<Settings />} />
             <Route path="/gemini-settings" element={<GeminiSettings />} />
             <Route path="/quickreplies" element={<QuickReplySettings />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route 
               path="/roles" 
               element={
@@ -356,6 +378,7 @@ const Dashboard: React.FC = () => {
                 </PermissionGuard>
               } 
             />
+            <Route path="/email-settings" element={<EmailSettings />} />
           </Routes>
         </React.Suspense>
       </Box>

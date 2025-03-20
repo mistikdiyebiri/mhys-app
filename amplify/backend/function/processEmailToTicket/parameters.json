@@ -1,0 +1,20 @@
+{
+  "lambdaLayers": [],
+  "environmentVariableList": [
+    {
+      "cloudFormationParameterName": "emailBucket",
+      "environmentVariableName": "EMAIL_BUCKET",
+      "value": "mhysapp-emails-dev"
+    },
+    {
+      "cloudFormationParameterName": "ticketsTable",
+      "environmentVariableName": "TICKETS_TABLE",
+      "value": "Tickets-dev"
+    },
+    {
+      "cloudFormationParameterName": "emailConfigsTable",
+      "environmentVariableName": "EMAIL_CONFIGS_TABLE",
+      "value": "EmailConfigurations-dev"
+    }
+  ]
+} 

@@ -1,0 +1,109 @@
+{
+  "providers": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-mhysapp-dev-123456-authRole",
+      "UnauthRoleArn": "arn:aws:iam::123456789012:role/amplify-mhysapp-dev-123456-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::123456789012:role/amplify-mhysapp-dev-123456-authRole",
+      "Region": "eu-central-1",
+      "DeploymentBucketName": "amplify-mhysapp-dev-123456-deployment",
+      "UnauthRoleName": "amplify-mhysapp-dev-123456-unauthRole",
+      "StackName": "amplify-mhysapp-dev-123456",
+      "StackId": "arn:aws:cloudformation:eu-central-1:123456789012:stack/amplify-mhysapp-dev-123456/abcdef"
+    }
+  },
+  "function": {
+    "processEmailToTicket": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda",
+      "dependsOn": [],
+      "lastBuildTimeStamp": "2023-05-15T12:00:00.000Z",
+      "lastPackageTimeStamp": "2023-05-15T12:00:00.000Z",
+      "distZipFilename": "processEmailToTicket-123456-build.zip",
+      "s3Bucket": {
+        "deploymentBucketName": "amplify-mhysapp-dev-123456-deployment",
+        "s3Key": "amplify-builds/processEmailToTicket-123456-build.zip"
+      },
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-mhysapp-dev-123456-deployment/amplify-cfn-templates/function/processEmailToTicket-cloudformation-template.json",
+        "logicalId": "functionprocessEmailToTicket"
+      },
+      "lastPushTimeStamp": "2023-05-15T12:30:00.000Z",
+      "output": {
+        "Region": "eu-central-1",
+        "Arn": "arn:aws:lambda:eu-central-1:123456789012:function:processEmailToTicket-dev",
+        "Name": "processEmailToTicket-dev",
+        "LambdaExecutionRole": "mhysappLambdaRole123456-dev"
+      }
+    }
+  },
+  "api": {
+    "emailapi": {
+      "service": "API Gateway",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [
+        {
+          "category": "function",
+          "resourceName": "processEmailToTicket",
+          "attributes": [
+            "Name",
+            "Arn"
+          ]
+        }
+      ],
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-mhysapp-dev-123456-deployment/amplify-cfn-templates/api/emailapi-cloudformation-template.json",
+        "logicalId": "apiemailapi"
+      },
+      "lastPushTimeStamp": "2023-05-15T12:30:00.000Z",
+      "output": {
+        "ApiName": "emailapi",
+        "RootUrl": "https://abcdef1234.execute-api.eu-central-1.amazonaws.com/dev",
+        "ApiId": "abcdef1234"
+      },
+      "lastBuildTimeStamp": "2023-05-15T12:00:00.000Z"
+    }
+  },
+  "storage": {
+    "emailStorage": {
+      "service": "S3",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-mhysapp-dev-123456-deployment/amplify-cfn-templates/storage/s3-cloudformation-template.json",
+        "logicalId": "storageemailStorage"
+      },
+      "lastPushTimeStamp": "2023-05-15T12:30:00.000Z",
+      "output": {
+        "BucketName": "mhysapp-emails-dev",
+        "Region": "eu-central-1"
+      }
+    },
+    "ticketTable": {
+      "service": "DynamoDB",
+      "providerPlugin": "awscloudformation",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-mhysapp-dev-123456-deployment/amplify-cfn-templates/storage/dynamodb-cloudformation-template.json",
+        "logicalId": "storageticketTable"
+      },
+      "lastPushTimeStamp": "2023-05-15T12:30:00.000Z",
+      "output": {
+        "TableName": "Tickets-dev",
+        "Region": "eu-central-1"
+      }
+    },
+    "emailConfigTable": {
+      "service": "DynamoDB",
+      "providerPlugin": "awscloudformation",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-mhysapp-dev-123456-deployment/amplify-cfn-templates/storage/dynamodb-cloudformation-template.json",
+        "logicalId": "storageemailConfigTable"
+      },
+      "lastPushTimeStamp": "2023-05-15T12:30:00.000Z",
+      "output": {
+        "TableName": "EmailConfigurations-dev",
+        "Region": "eu-central-1"
+      }
+    }
+  }
+} 

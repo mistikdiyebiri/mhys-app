@@ -41,8 +41,6 @@ const CreateTicketForm: React.FC<CreateTicketFormProps> = ({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TicketCategory>(TicketCategory.GENERAL);
   const [priority, setPriority] = useState<TicketPriority>(TicketPriority.MEDIUM);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -65,8 +63,7 @@ const CreateTicketForm: React.FC<CreateTicketFormProps> = ({
         title,
         description,
         category,
-        priority,
-        tags: tags.length > 0 ? tags : undefined
+        priority
       };
       
       await ticketService.createTicket(userId, request);
@@ -77,7 +74,6 @@ const CreateTicketForm: React.FC<CreateTicketFormProps> = ({
       setDescription('');
       setCategory(TicketCategory.GENERAL);
       setPriority(TicketPriority.MEDIUM);
-      setTags([]);
       
       // Başarılı callback
       if (onSuccess) {
@@ -88,31 +84,6 @@ const CreateTicketForm: React.FC<CreateTicketFormProps> = ({
       setError('Bilet oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
-    }
-  };
-  
-  // Etiket ekle
-  const handleAddTag = () => {
-    if (!tagInput.trim()) return;
-    
-    // Zaten eklenmiş mi kontrol et
-    if (!tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-    }
-    
-    setTagInput('');
-  };
-  
-  // Etiket sil
-  const handleDeleteTag = (tagToDelete: string) => {
-    setTags(tags.filter(tag => tag !== tagToDelete));
-  };
-
-  // Enter tuşuna basınca etiket ekle
-  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      handleAddTag();
     }
   };
 
@@ -198,47 +169,6 @@ const CreateTicketForm: React.FC<CreateTicketFormProps> = ({
               placeholder="Lütfen sorununuzu detaylı olarak açıklayın"
             />
           </Grid>
-          
-          <Grid item xs={12}>
-            <TextField
-              label="Etiket Ekle"
-              fullWidth
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleTagInputKeyDown}
-              disabled={loading}
-              placeholder="Etiket girin ve Enter'a basın"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={handleAddTag}
-                      disabled={!tagInput.trim() || loading}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          
-          {tags.length > 0 && (
-            <Grid item xs={12}>
-              <Box display="flex" flexWrap="wrap" gap={1}>
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={() => handleDeleteTag(tag)}
-                    color="primary"
-                    variant="outlined"
-                    disabled={loading}
-                  />
-                ))}
-              </Box>
-            </Grid>
-          )}
           
           <Grid item xs={12}>
             <Box textAlign="right">

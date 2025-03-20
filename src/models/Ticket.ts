@@ -22,6 +22,8 @@ export enum TicketCategory {
   BILLING = 'billing',
   GENERAL = 'general',
   FEATURE_REQUEST = 'featureRequest',
+  TEKNIK = 'teknik',
+  GENEL = 'genel',
 }
 
 // Temel bilet modeli
@@ -38,7 +40,11 @@ export interface Ticket {
   updatedAt: string; // ISO tarih formatı
   closedAt: string | null; // Kapatılmışsa ISO tarih formatı
   attachments?: string[]; // Ek dosya URL'leri
-  tags?: string[]; // İsteğe bağlı etiketler
+  metadata?: {
+    fromEmail?: string; // E-posta ile geldiyse gönderen adresi
+    toEmail?: string; // E-posta ile geldiyse alıcı adresi
+    isFromEmail?: boolean; // E-posta ile oluşturuldu mu
+  };
 }
 
 // Bilet yanıtları
@@ -46,10 +52,13 @@ export interface TicketComment {
   id: string;
   ticketId: string;
   text: string;
+  content?: string; // Eski text alanının alternatifi
   createdBy: string; // Kullanıcı ID'si (müşteri veya personel)
   createdAt: string; // ISO tarih formatı
   isInternal: boolean; // Dahili not mu (sadece personel görebilir)
+  isEmployee?: boolean; // Yanıt personel tarafından mı oluşturuldu
   attachments?: string[]; // Ek dosya URL'leri
+  isEmailSent?: boolean; // E-posta olarak gönderildi mi
 }
 
 // Yeni bilet oluşturma
@@ -59,7 +68,11 @@ export interface CreateTicketRequest {
   category: TicketCategory;
   priority?: TicketPriority; // Öncelik belirtilmezse otomatik MEDIUM olur
   attachments?: string[];
-  tags?: string[];
+  metadata?: {
+    fromEmail?: string;
+    toEmail?: string;
+    isFromEmail?: boolean;
+  };
 }
 
 // Bilet güncelleme
@@ -70,7 +83,7 @@ export interface UpdateTicketRequest {
   priority?: TicketPriority;
   category?: TicketCategory;
   assignedTo?: string | null;
-  tags?: string[];
+  updatedAt?: string;
 }
 
 // API Yanıt Tipleri
@@ -107,7 +120,6 @@ export const createMockTickets = (): Ticket[] => {
       createdAt: now,
       updatedAt: now,
       closedAt: null,
-      tags: ['login', 'şifre']
     },
     {
       id: '2',
@@ -121,7 +133,6 @@ export const createMockTickets = (): Ticket[] => {
       createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 gün önce
       updatedAt: now,
       closedAt: null,
-      tags: ['performans', 'yazılım']
     },
     {
       id: '3',
@@ -135,7 +146,6 @@ export const createMockTickets = (): Ticket[] => {
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 gün önce
       updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 gün önce
       closedAt: null,
-      tags: ['fatura', 'ücretlendirme']
     },
     {
       id: '4',
@@ -149,7 +159,6 @@ export const createMockTickets = (): Ticket[] => {
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 gün önce
       updatedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(), // 25 gün önce
       closedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(), // 25 gün önce
-      tags: ['özellik', 'geliştirme']
     },
     {
       id: '5',
@@ -163,7 +172,6 @@ export const createMockTickets = (): Ticket[] => {
       createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 gün önce
       updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), // 9 gün önce
       closedAt: null,
-      tags: ['bakım', 'bilgilendirme']
     }
   ];
 };

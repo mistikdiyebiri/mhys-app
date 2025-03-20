@@ -36,7 +36,8 @@ import {
   Divider,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -76,6 +77,14 @@ const availableRoles = [
   { id: 'manager', name: 'Yönetici' },
   { id: 'admin', name: 'Admin' }
 ];
+
+// Her rol için otomatik atanacak izinler
+const rolePermissions = {
+  'agent': ['view_tickets', 'create_tickets', 'edit_tickets'],
+  'supervisor': ['view_tickets', 'create_tickets', 'edit_tickets', 'assign_tickets', 'view_reports', 'create_reports'],
+  'manager': ['view_tickets', 'create_tickets', 'edit_tickets', 'delete_tickets', 'assign_tickets', 'view_reports', 'create_reports', 'manage_departments'],
+  'admin': availablePermissions.map(permission => permission.id) // Admin tüm izinlere sahip olsun
+};
 
 const Employees: React.FC = () => {
   const { userRole } = useAuth();
@@ -206,10 +215,25 @@ const Employees: React.FC = () => {
   };
 
   const handleSelectChange = (e: SelectChangeEvent) => {
-    setFormState({
-      ...formState,
-      [e.target.name]: e.target.value
-    });
+    const fieldName = e.target.name;
+    const fieldValue = e.target.value;
+    
+    // Rol değiştirildiğinde, role özgü izinleri otomatik ata
+    if (fieldName === 'role') {
+      const roleId = fieldValue as string;
+      const permissions = rolePermissions[roleId as keyof typeof rolePermissions] || [];
+      
+      setFormState({
+        ...formState,
+        [fieldName]: fieldValue,
+        permissions: permissions
+      });
+    } else {
+      setFormState({
+        ...formState,
+        [fieldName]: fieldValue
+      });
+    }
   };
 
   const handlePermissionChange = (permissionId: string) => {
@@ -264,14 +288,16 @@ const Employees: React.FC = () => {
         permissions: employee.permissions || []
       });
     } else {
+      // Yeni personel için varsayılan değerler
+      const defaultRole = 'agent';
       setFormState({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
         departmentId: '',
-        role: 'agent',
-        permissions: ['view_tickets']
+        role: defaultRole,
+        permissions: rolePermissions[defaultRole] || ['view_tickets']
       });
     }
     
@@ -421,10 +447,7 @@ const Employees: React.FC = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Personel Yönetimi
-        </Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
         <Box>
           <Tooltip title="Yenile">
             <IconButton onClick={handleRefresh} disabled={loading}>
@@ -667,6 +690,12 @@ const Employees: React.FC = () => {
                 İzinler
               </Typography>
               <Divider sx={{ mb: 2 }} />
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  İzinler seçtiğiniz role göre otomatik olarak belirlendi. İsterseniz aşağıdan özel izinleri değiştirebilirsiniz.
+                </Typography>
+              </Alert>
               
               <FormGroup>
                 <Grid container spacing={2}>

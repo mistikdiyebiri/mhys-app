@@ -34,75 +34,12 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-
-// Quick Reply türü tanımı
-interface QuickReply {
-  id: string;
-  title: string;
-  text: string;
-  category?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Örnek kategoriler
-const CATEGORIES = [
-  'Genel',
-  'Teşekkür',
-  'Bilgilendirme',
-  'Çözüm',
-  'Sorun Giderme',
-  'Teknik'
-];
-
-// Örnek hazır yanıtlar
-const sampleQuickReplies: QuickReply[] = [
-  {
-    id: '1',
-    title: 'Teşekkür mesajı',
-    text: 'Talebiniz için teşekkür ederiz. En kısa sürede inceleyip size dönüş yapacağız.',
-    category: 'Teşekkür',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'İşleme alındı',
-    text: 'Talebiniz işleme alınmıştır. Konuyla ilgili çalışmalarımız devam etmektedir.',
-    category: 'Bilgilendirme',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Ek bilgi talebi',
-    text: 'Talebinizle ilgili daha detaylı bilgiye ihtiyacımız var. Lütfen aşağıdaki bilgileri paylaşır mısınız?\n\n1. Sorunu ne zaman fark ettiniz?\n2. Sorun hangi durumlarda ortaya çıkıyor?\n3. Daha önce benzer bir sorun yaşadınız mı?',
-    category: 'Sorun Giderme',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '4',
-    title: 'Çözüm bildirisi',
-    text: 'Talebiniz çözümlenmiştir. Sorun [ÇÖZÜM AÇIKLAMASI] şeklinde giderilmiştir. Başka bir sorunla karşılaşırsanız lütfen bize bildirin.',
-    category: 'Çözüm',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '5',
-    title: 'Tahmini süre',
-    text: 'Talebiniz değerlendirme aşamasındadır. Tahmini çözüm süresi 24-48 saat içerisindedir. Anlayışınız için teşekkür ederiz.',
-    category: 'Bilgilendirme',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+import quickReplyService, { QuickReply, CATEGORIES } from '../../services/QuickReplyService';
 
 const QuickReplySettings: React.FC = () => {
   const theme = useTheme();
   const { userRole } = useAuth();
-  const [quickReplies, setQuickReplies] = useState<QuickReply[]>(sampleQuickReplies);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [editingReply, setEditingReply] = useState<QuickReply | null>(null);
@@ -114,6 +51,25 @@ const QuickReplySettings: React.FC = () => {
   const [selectedReplyId, setSelectedReplyId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Hazır yanıtları yükle
+  useEffect(() => {
+    loadQuickReplies();
+  }, []);
+
+  const loadQuickReplies = () => {
+    setLoading(true);
+    try {
+      const replies = quickReplyService.getQuickReplies();
+      setQuickReplies(replies);
+    } catch (error) {
+      console.error('Hazır yanıtlar yüklenirken hata oluştu:', error);
+      setErrorMessage('Hazır yanıtlar yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Düzenleme modunu başlat
   const handleEdit = (reply: QuickReply) => {
@@ -135,10 +91,21 @@ const QuickReplySettings: React.FC = () => {
   // Hazır yanıt silme
   const handleDelete = () => {
     if (selectedReplyId) {
-      setQuickReplies(prevReplies => prevReplies.filter(reply => reply.id !== selectedReplyId));
-      setSuccessMessage('Hazır yanıt başarıyla silindi');
-      setDeleteDialog(false);
-      setSelectedReplyId(null);
+      try {
+        const success = quickReplyService.deleteQuickReply(selectedReplyId);
+        if (success) {
+          setQuickReplies(prevReplies => prevReplies.filter(reply => reply.id !== selectedReplyId));
+          setSuccessMessage('Hazır yanıt başarıyla silindi');
+        } else {
+          setErrorMessage('Hazır yanıt silinirken bir hata oluştu');
+        }
+      } catch (error) {
+        console.error('Hazır yanıt silinirken hata oluştu:', error);
+        setErrorMessage('Hazır yanıt silinirken bir hata oluştu');
+      } finally {
+        setDeleteDialog(false);
+        setSelectedReplyId(null);
+      }
     }
   };
 
@@ -170,34 +137,31 @@ const QuickReplySettings: React.FC = () => {
         return;
       }
 
-      const now = new Date().toISOString();
-
       if (editingReply) {
         // Mevcut yanıtı güncelle
-        setQuickReplies(prevReplies => 
-          prevReplies.map(reply => 
-            reply.id === editingReply.id 
-              ? {
-                  ...reply,
-                  title: formData.title,
-                  text: formData.text,
-                  category: formData.category,
-                  updatedAt: now
-                }
-              : reply
-          )
-        );
-        setSuccessMessage('Hazır yanıt başarıyla güncellendi');
-      } else {
-        // Yeni yanıt ekle
-        const newReply: QuickReply = {
-          id: `qr-${Date.now()}`,
+        const updatedReply = quickReplyService.updateQuickReply(editingReply.id, {
           title: formData.title,
           text: formData.text,
-          category: formData.category,
-          createdAt: now,
-          updatedAt: now
-        };
+          category: formData.category
+        });
+        
+        if (updatedReply) {
+          setQuickReplies(prevReplies => 
+            prevReplies.map(reply => 
+              reply.id === editingReply.id ? updatedReply : reply
+            )
+          );
+          setSuccessMessage('Hazır yanıt başarıyla güncellendi');
+        } else {
+          setErrorMessage('Hazır yanıt güncellenirken bir hata oluştu');
+        }
+      } else {
+        // Yeni yanıt ekle
+        const newReply = quickReplyService.addQuickReply({
+          title: formData.title,
+          text: formData.text,
+          category: formData.category
+        });
 
         setQuickReplies(prevReplies => [...prevReplies, newReply]);
         setSuccessMessage('Yeni hazır yanıt başarıyla eklendi');
@@ -250,44 +214,52 @@ const QuickReplySettings: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {quickReplies.map((reply) => (
-                      <TableRow key={reply.id}>
-                        <TableCell component="th" scope="row">
-                          {reply.title}
-                        </TableCell>
-                        <TableCell>
-                          {reply.category || 'Genel'}
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              maxWidth: '300px',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}
-                          >
-                            {reply.text}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(reply.updatedAt).toLocaleDateString('tr-TR')}
-                        </TableCell>
-                        <TableCell align="right">
-                          <Tooltip title="Düzenle">
-                            <IconButton onClick={() => handleEdit(reply)} color="primary">
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Sil">
-                            <IconButton onClick={() => handleDeleteClick(reply.id)} color="error">
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
+                    {quickReplies.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          {loading ? 'Yükleniyor...' : 'Henüz hazır yanıt eklenmemiş'}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      quickReplies.map((reply) => (
+                        <TableRow key={reply.id}>
+                          <TableCell component="th" scope="row">
+                            {reply.title}
+                          </TableCell>
+                          <TableCell>
+                            {reply.category || 'Genel'}
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                maxWidth: '300px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {reply.text}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(reply.updatedAt).toLocaleDateString('tr-TR')}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Tooltip title="Düzenle">
+                              <IconButton onClick={() => handleEdit(reply)} color="primary">
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Sil">
+                              <IconButton onClick={() => handleDeleteClick(reply.id)} color="error">
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>

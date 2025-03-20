@@ -153,10 +153,11 @@ const Login: React.FC = () => {
         <Paper 
           elevation={3} 
           sx={{ 
-            p: 4, 
+            padding: 4, 
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center',
+            borderRadius: 2,
             width: '100%'
           }}
         >
@@ -165,14 +166,20 @@ const Login: React.FC = () => {
               bgcolor: 'primary.main', 
               color: 'white', 
               borderRadius: '50%', 
-              p: 1, 
-              mb: 1
+              p: 1.5, 
+              mb: 2
             }}
           >
             <LockOutlinedIcon />
           </Box>
-          <Typography component="h1" variant="h5">
-            Müşteri Girişi
+          <Typography component="h1" variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+            MHYS
+          </Typography>
+          <Typography component="h2" variant="h6" gutterBottom color="primary.main">
+            Müşteri Hizmet Yönetim Sistemi
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+            Talep, destek ve müşteri yönetimi için tek platform
           </Typography>
           
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 3, width: '100%' }}>
@@ -242,45 +249,68 @@ const Login: React.FC = () => {
         
         {/* Geliştirme sırasında test için hızlı giriş butonları */}
         {process.env.NODE_ENV !== 'production' && (
-          <Box mt={3} sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
-            <Typography variant="body2" align="center" sx={{ mb: 1 }}>
-              Test Kullanıcıları
+          <Paper
+            elevation={2}
+            sx={{
+              mt: 3,
+              p: 2,
+              width: '100%',
+              borderRadius: 2,
+              bgcolor: 'background.paper'
+            }}
+          >
+            <Typography variant="subtitle2" align="center" gutterBottom color="text.secondary">
+              Hızlı Test Girişi
             </Typography>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => setTestUser('admin')}
-              color="secondary"
-            >
-              Admin
-            </Button>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => setTestUser('employee')}
-              color="primary"
-            >
-              Personel
-            </Button>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => setTestUser('customer')}
-              color="info"
-            >
-              Müşteri
-            </Button>
-          </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+              <Button 
+                variant="contained" 
+                onClick={() => setTestUser('admin')}
+                color="secondary"
+                sx={{ minWidth: '100px' }}
+                startIcon={<span style={{ fontSize: '10px' }}>👑</span>}
+              >
+                Admin
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={() => setTestUser('employee')}
+                color="primary"
+                sx={{ minWidth: '100px' }}
+                startIcon={<span style={{ fontSize: '10px' }}>👨‍💼</span>}
+              >
+                Personel
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={() => setTestUser('customer')}
+                color="info"
+                sx={{ minWidth: '100px' }}
+                startIcon={<span style={{ fontSize: '10px' }}>👤</span>}
+              >
+                Müşteri
+              </Button>
+            </Box>
+          </Paper>
         )}
         
         <Box mt={3}>
           <Typography variant="body2" align="center">
             Yönetici veya personel girişi için{' '}
             <Link to="/admin" style={{ textDecoration: 'none' }}>
-              <Typography variant="body2" component="span" color="primary">
+              <Typography variant="body2" component="span" color="primary" fontWeight="bold">
                 tıklayınız
               </Typography>
             </Link>
+          </Typography>
+        </Box>
+        
+        <Box mt={5} sx={{ textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+            © {new Date().getFullYear()} MHYS - Müşteri Hizmet Yönetim Sistemi
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Güvenli bağlantı ile korunmaktadır 🔒
           </Typography>
         </Box>
       </Box>

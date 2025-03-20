@@ -3,16 +3,22 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-// @ts-ignore
-import { Amplify } from 'aws-amplify';
-// Auth'u artık farklı şekilde tanımlayacağız
-import awsExports from './aws-exports';
-// Kendi AWS Amplify konfigürasyonumuzu içeri aktaralım
-import configureAmplify from './amplify-config';
-// DatePicker için gerekli bileşenler
+
+// Material UI imports
+import { StyledEngineProvider } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-// Locale import kaldırıldı
+import { trTR } from '@mui/x-date-pickers/locales';
+import { tr } from 'date-fns/locale';
+
+// AWS Amplify
+// @ts-ignore
+import { Amplify } from 'aws-amplify';
+import awsExports from './aws-exports';
+import configureAmplify from './amplify-config';
+
+// Notifications
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // Mock Auth için tip tanımları
 interface UserAttributes {
@@ -140,6 +146,11 @@ const mockAuth = {
   }
 };
 
+// Global window nesnesine mock Auth metodlarını ekle
+// Bu sayede tüm uygulamada bu metodlara erişilebilir
+// @ts-ignore - TypeScript hatalarını görmezden geliyoruz
+window.mockAuthMethods = mockAuth;
+
 // Amplify yapılandırmasını yükle
 if (process.env.NODE_ENV === 'production') {
   // Prodüksiyon ortamında gerçek Amplify konfigürasyonunu kullan
@@ -162,13 +173,6 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Global window nesnesine mock Auth metodlarını ekle
-// Bu sayede tüm uygulamada bu metodlara erişilebilir
-// @ts-ignore - TypeScript hatalarını görmezden geliyoruz
-window.mockAuthMethods = mockAuth;
-
-// AuthContext'de bu metodları kullanacağız
-
 // Hata yakalama için genel bir error handler ekleyelim
 window.addEventListener('error', (event) => {
   console.error('Global error handler:', event.error);
@@ -182,15 +186,19 @@ window.addEventListener('unhandledrejection', (event) => {
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
 root.render(
   <React.StrictMode>
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <App />
-    </LocalizationProvider>
+    <StyledEngineProvider injectFirst>
+      <LocalizationProvider 
+        dateAdapter={AdapterDateFns}
+        adapterLocale={tr}
+        localeText={trTR.components.MuiLocalizationProvider.defaultProps.localeText}
+      >
+        <App />
+      </LocalizationProvider>
+    </StyledEngineProvider>
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
