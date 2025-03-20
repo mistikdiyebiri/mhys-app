@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { styled, useTheme, Theme } from '@mui/material/styles';
+import { styled, useTheme, Theme, CSSObject } from '@mui/material/styles';
 import {
   Box,
   Drawer,
@@ -13,23 +13,28 @@ import {
   ListItemIcon,
   ListItemText,
   List,
-  Tooltip
+  Tooltip,
+  Drawer as MuiDrawer,
+  AppBar as MuiAppBar,
+  Toolbar
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import BusinessIcon from '@mui/icons-material/Business';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import SettingsIcon from '@mui/icons-material/Settings';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import SecurityIcon from '@mui/icons-material/Security';
-import TextsmsIcon from '@mui/icons-material/Textsms';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import EmailIcon from '@mui/icons-material/Email';
+import { 
+  Menu as MenuIcon, 
+  ChevronLeft as ChevronLeftIcon, 
+  ChevronRight as ChevronRightIcon,
+  Dashboard as DashboardIcon,
+  SupportAgent as SupportAgentIcon,
+  People as PeopleIcon,
+  Business as BusinessIcon,
+  BarChart as BarChartIcon,
+  Settings as SettingsIcon,
+  Notifications as NotificationsIcon,
+  Security as SecurityIcon,
+  Textsms as TextsmsIcon,
+  SmartToy as SmartToyIcon,
+  Email as EmailIcon,
+  ExitToApp as ExitToAppIcon
+} from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { PagePermission } from '../../models/Role';
 import PermissionGuard from '../../components/PermissionGuard';
@@ -183,12 +188,6 @@ const Dashboard: React.FC = () => {
       permission: PagePermission.ROLES
     },
     {
-      text: 'E-posta Ayarları',
-      path: '/admin/dashboard/email-settings',
-      icon: <EmailIcon />,
-      permission: PagePermission.SETTINGS
-    },
-    {
       text: 'Hazır Yanıtlar',
       path: '/admin/dashboard/quickreplies',
       icon: <TextsmsIcon />,
@@ -199,6 +198,12 @@ const Dashboard: React.FC = () => {
       path: '/admin/dashboard/gemini-settings',
       icon: <SmartToyIcon />,
       permission: PagePermission.GEMINI_SETTINGS
+    },
+    {
+      text: 'E-posta Ayarları',
+      path: '/admin/dashboard/email-settings',
+      icon: <EmailIcon />,
+      permission: PagePermission.SETTINGS
     },
     {
       text: 'Ayarlar',
@@ -370,6 +375,7 @@ const Dashboard: React.FC = () => {
             <Route path="/gemini-settings" element={<GeminiSettings />} />
             <Route path="/quickreplies" element={<QuickReplySettings />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/email-settings" element={<EmailSettings />} />
             <Route 
               path="/roles" 
               element={
@@ -378,7 +384,6 @@ const Dashboard: React.FC = () => {
                 </PermissionGuard>
               } 
             />
-            <Route path="/email-settings" element={<EmailSettings />} />
           </Routes>
         </React.Suspense>
       </Box>

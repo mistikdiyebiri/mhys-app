@@ -247,18 +247,18 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/admin/settings"
+                path="/admin/notifications"
                 element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminSettings />
+                  <ProtectedRoute requiredRole="admin,employee">
+                    <Notifications />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/admin/notifications"
+                path="/admin/settings"
                 element={
                   <ProtectedRoute requiredRole="admin">
-                    <Notifications />
+                    <AdminSettings />
                   </ProtectedRoute>
                 }
               />
@@ -271,18 +271,18 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/admin/quickreplies"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <QuickReplySettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/admin/roles"
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <RolesManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/quickreplies"
+                element={
+                  <ProtectedRoute requiredRole="admin,employee">
+                    <QuickReplySettings />
                   </ProtectedRoute>
                 }
               />

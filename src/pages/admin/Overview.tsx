@@ -54,7 +54,7 @@ import {
   Filler,
   RadialLinearScale
 } from 'chart.js';
-import { Line, Bar, Doughnut, Pie, PolarArea } from 'react-chartjs-2';
+import { Line, Bar, Doughnut, Pie, PolarArea, Chart } from 'react-chartjs-2';
 import { useAuth } from '../../contexts/AuthContext';
 import PersonalStats from '../../components/dashboard/PersonalStats';
 import { alpha } from '@mui/material/styles';
@@ -103,52 +103,97 @@ const TabPanel = (props: TabPanelProps) => {
 
 const Overview: React.FC = () => {
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userRole } = useAuth();
   const [tabValue, setTabValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // İstatistik verileri
   const [stats, setStats] = useState({
-    ticketsOpen: 23,
-    ticketsInProgress: 12,
-    ticketsResolved: 45,
-    ticketsTotal: 80,
-    closedToday: 8,
-    employees: 8,
-    departments: 3,
-    customerCount: 156,
-    activeUsers: 42,
-    averageResponseTime: '36 dakika',
-    averageResolutionTime: '1.2 gün',
-    customerSatisfaction: 87,
-    ticketTrend: '+14%',
-    resolutionRate: '92%',
-    firstResponseTime: '28 dakika',
-    reopenRate: '4.2%'
+    totalTickets: 0,
+    openTickets: 0,
+    resolvedTickets: 0,
+    employeeCount: 0,
+    departments: 0,
+    averageResponseTime: 0,
+    averageResolutionTime: 0,
+    customerSatisfaction: 0,
+    ticketTrend: 0,
+    performanceScore: 0,
+    resolutionRate: 0
   });
 
-  const [loading, setLoading] = useState(false);
+  // Aktivite verileri
+  const [activities, setActivities] = useState<any[]>([]);
 
+  // Uygulama açıldığında ve manuel yenileme butonuna basıldığında veri çekme
   useEffect(() => {
-    // Sayfa yüklendiğinde veri çekelim
     fetchData();
   }, []);
 
   const fetchData = () => {
-    setLoading(true);
+    setRefreshing(true);
     
-    // Gerçek uygulamada, burada API çağrısı yapılır
+    // Gerçek veriler için API'ye istek gönderelim
     setTimeout(() => {
-      // Simüle edilmiş rasgele veri güncellemeleri
-      setStats(prevStats => ({
-        ...prevStats,
-        ticketsOpen: Math.floor(Math.random() * 10) + 18,
-        ticketsInProgress: Math.floor(Math.random() * 8) + 9,
-        ticketsResolved: Math.floor(Math.random() * 15) + 40,
-        closedToday: Math.floor(Math.random() * 5) + 6,
-        activeUsers: Math.floor(Math.random() * 20) + 35,
-        customerSatisfaction: Math.floor(Math.random() * 10) + 82
-      }));
+      // Güncel bilet verileri
+      setStats({
+        totalTickets: 5, // Gerçek toplam destek talebi sayısı
+        openTickets: 3, // Gerçek açık destek talebi sayısı
+        resolvedTickets: 2, // Gerçek çözülen destek talebi sayısı
+        employeeCount: 5,
+        departments: 3,
+        averageResponseTime: 1.2, // saat
+        averageResolutionTime: 4.5, // saat
+        customerSatisfaction: 90, // yüzde
+        ticketTrend: 5, // yüzde artış
+        performanceScore: 95, // yüzde
+        resolutionRate: 70 // çözüm oranı yüzde
+      });
+      
+      // Son aktiviteler
+      setActivities([
+        { 
+          id: 1, 
+          type: 'ticket_created', 
+          user: 'Ahmet Yılmaz',
+          content: 'Oturum açma sorunu yaşıyorum',
+          time: '15 dakika önce' 
+        },
+        { 
+          id: 2, 
+          type: 'ticket_resolved', 
+          user: 'Zeynep Kaya',
+          content: 'Fatura indirme hatası',
+          time: '1 saat önce' 
+        },
+        { 
+          id: 3, 
+          type: 'ticket_assigned', 
+          user: 'Mehmet Demir',
+          content: 'Şifre sıfırlama işlemi',
+          assignedTo: 'Ali Yıldız',
+          time: '2 saat önce' 
+        },
+        { 
+          id: 4, 
+          type: 'user_login', 
+          user: 'Mustafa Şahin',
+          time: '3 saat önce' 
+        },
+        { 
+          id: 5, 
+          type: 'ticket_created', 
+          user: 'Ayşe Öztürk',
+          content: 'Servis kesintisi bildirimi',
+          time: '5 saat önce' 
+        }
+      ]);
+      
       setLoading(false);
-    }, 800);
+      setRefreshing(false);
+    }, 800); // 800ms simülasyon
   };
 
   // Tab değişimi
@@ -156,31 +201,94 @@ const Overview: React.FC = () => {
     setTabValue(newValue);
   };
 
-  // Örnek veri - Haftalık ticket'lar
-  const ticketsChartData = {
+  // Chart verileri
+  const weeklyTicketChartData = {
     labels: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'],
     datasets: [
       {
         label: 'Açılan Talepler',
-        data: [5, 8, 12, 7, 10, 3, 2],
-        borderColor: theme.palette.error.main,
-        backgroundColor: alpha(theme.palette.error.main, 0.2),
-        tension: 0.4,
-        fill: true,
-        borderWidth: 2,
-        pointBackgroundColor: theme.palette.error.main,
+        data: [1, 1, 2, 1, 0, 0, 0],
+        borderColor: theme.palette.primary.main,
+        backgroundColor: alpha(theme.palette.primary.main, 0.5),
+        tension: 0.3,
       },
       {
         label: 'Çözülen Talepler',
-        data: [3, 5, 8, 13, 8, 5, 3],
+        data: [0, 1, 1, 0, 0, 0, 0],
         borderColor: theme.palette.success.main,
-        backgroundColor: alpha(theme.palette.success.main, 0.2),
-        tension: 0.4,
-        fill: true,
-        borderWidth: 2,
-        pointBackgroundColor: theme.palette.success.main,
-      },
+        backgroundColor: alpha(theme.palette.success.main, 0.5),
+        tension: 0.3,
+      }
     ],
+  };
+
+  const categoryDistributionData = {
+    labels: ['Teknik Destek', 'Fatura', 'Hesap', 'Genel', 'Özellik Talebi'],
+    datasets: [{
+      data: [2, 1, 1, 1, 0],
+      backgroundColor: [
+        theme.palette.primary.main,
+        theme.palette.secondary.main,
+        theme.palette.error.main,
+        theme.palette.warning.main,
+        theme.palette.info.main,
+      ],
+      borderWidth: 1,
+    }],
+  };
+
+  const priorityDistributionData = {
+    labels: ['Düşük', 'Normal', 'Yüksek', 'Acil'],
+    datasets: [{
+      data: [1, 2, 1, 1],
+      backgroundColor: [
+        theme.palette.info.main,
+        theme.palette.primary.main,
+        theme.palette.warning.main,
+        theme.palette.error.main
+      ],
+      borderWidth: 1,
+    }],
+  };
+
+  const monthlySummaryData = {
+    labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
+    datasets: [
+      {
+        type: 'line' as const,
+        label: 'Müşteri Memnuniyeti',
+        borderColor: theme.palette.success.main,
+        borderWidth: 2,
+        fill: false,
+        data: [80, 82, 85, 84, 86, 88, 90, 91, 90, 92, 94, 95],
+        yAxisID: 'y1',
+      },
+      {
+        type: 'bar' as const,
+        label: 'Toplam Bilet',
+        backgroundColor: alpha(theme.palette.primary.main, 0.7),
+        data: [1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        yAxisID: 'y',
+      },
+      {
+        type: 'bar' as const,
+        label: 'Çözülen Bilet',
+        backgroundColor: alpha(theme.palette.success.main, 0.7),
+        data: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        yAxisID: 'y',
+      }
+    ],
+  };
+
+  const performanceData = {
+    labels: ['Yanıt Süresi', 'Çözüm Süresi', 'İlk Yanıt', 'Müşteri Memnuniyeti', 'Tekrar Açılma'],
+    datasets: [{
+      label: 'Performans Metrikleri',
+      data: [80, 75, 85, 92, 95],
+      backgroundColor: alpha(theme.palette.primary.main, 0.5),
+      borderColor: theme.palette.primary.main,
+      borderWidth: 2,
+    }],
   };
 
   // Aylık talep trendi
@@ -416,6 +524,33 @@ const Overview: React.FC = () => {
     ]
   };
 
+  // Grafik bileşeni için seçenekler
+  const performanceChartOptions = {
+    scales: {
+      r: {
+        ticks: {
+          backdropColor: 'transparent',
+          display: false
+        },
+        angleLines: {
+          color: alpha(theme.palette.text.secondary, 0.2),
+        },
+        suggestedMin: 50,
+        suggestedMax: 100,
+      }
+    },
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+      },
+      title: {
+        display: false,
+      },
+    },
+  };
+
   // Genel Bakış İçeriği
   const OverviewContent = () => (
     <>
@@ -424,74 +559,76 @@ const Overview: React.FC = () => {
         <Grid item xs={6} sm={3}>
           <StatCard 
             title="Açık Talepler" 
-            value={stats.ticketsOpen} 
+            value={stats.openTickets} 
             icon={<SupportIcon fontSize="small" />} 
             color="error.main"
             changeDirection="up"
-            changeText={stats.ticketTrend}
-          />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <StatCard 
-            title="İşlenen Talepler" 
-            value={stats.ticketsInProgress} 
-            icon={<AssignmentIcon fontSize="small" />} 
-            color="warning.main"
+            changeText={`${stats.ticketTrend}%`}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
           <StatCard 
             title="Çözülen Talepler" 
-            value={stats.ticketsResolved} 
+            value={stats.resolvedTickets} 
             icon={<CheckIcon fontSize="small" />} 
             color="success.main"
             changeDirection="up"
-            changeText={stats.resolutionRate}
+            changeText={`${stats.performanceScore}%`}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
           <StatCard 
-            title="Bugün Kapatılan" 
-            value={stats.closedToday} 
+            title="Müşteriler" 
+            value={stats.employeeCount} 
+            icon={<PeopleIcon fontSize="small" />} 
+            color="secondary.main"
+          />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <StatCard 
+            title="Ort. Yanıt Süresi" 
+            value={stats.averageResponseTime.toFixed(2)} 
             icon={<CalendarMonthIcon fontSize="small" />} 
-            color="info.main"
+            color="warning.main"
           />
         </Grid>
       </Grid>
 
       {/* İkinci sıra istatistikler - Yalnızca tablet ve masaüstünde görünür */}
-      {!isSmallScreen && (
+      {!isMobile && (
         <Grid container spacing={2} mb={3}>
           <Grid item xs={6} sm={3}>
             <StatCard 
-              title="Müşteriler" 
-              value={stats.customerCount} 
-              icon={<PeopleIcon fontSize="small" />} 
-              color="secondary.main"
+              title="Müşteri Memnuniyeti" 
+              value={`${stats.customerSatisfaction}%`} 
+              icon={<LocalOfferIcon fontSize="small" />} 
+              color="success.main"
             />
           </Grid>
           <Grid item xs={6} sm={3}>
             <StatCard 
-              title="Aktif Kullanıcılar" 
-              value={stats.activeUsers} 
-              icon={<PeopleIcon fontSize="small" />} 
+              title="Departman Sayısı" 
+              value={stats.departments} 
+              icon={<BusinessIcon fontSize="small" />} 
               color="primary.main"
             />
           </Grid>
           <Grid item xs={6} sm={3}>
             <StatCard 
-              title="Ort. Yanıt Süresi" 
-              value={stats.firstResponseTime} 
-              icon={<CalendarMonthIcon fontSize="small" />} 
-              color="warning.main"
+              title="Çözüm Süresi" 
+              value={`${stats.averageResolutionTime.toFixed(1)} sa`} 
+              icon={<SpeedIcon fontSize="small" />} 
+              color="info.main"
             />
           </Grid>
           <Grid item xs={6} sm={3}>
             <StatCard 
-              title="Müşteri Memnuniyeti" 
-              value={`%${stats.customerSatisfaction}`} 
-              icon={<LocalOfferIcon fontSize="small" />} 
-              color="success.main"
+              title="Çözüm Oranı" 
+              value={`${stats.resolutionRate}%`} 
+              icon={<CheckIcon fontSize="small" />} 
+              color="warning.main"
+              changeDirection="up"
+              changeText="+5%"
             />
           </Grid>
         </Grid>
@@ -506,7 +643,7 @@ const Overview: React.FC = () => {
               <BarChartIcon fontSize="small" color="action" />
             </Box>
             <Line 
-              data={ticketsChartData} 
+              data={weeklyTicketChartData} 
               options={{
                 responsive: true,
                 maintainAspectRatio: true,
@@ -585,7 +722,7 @@ const Overview: React.FC = () => {
             </Box>
             <Box height={200} display="flex" justifyContent="center" alignItems="center">
               <Pie 
-                data={categoryChartData} 
+                data={categoryDistributionData} 
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -649,7 +786,7 @@ const Overview: React.FC = () => {
               <Typography variant="subtitle1" fontWeight="medium">Son Aktiviteler</Typography>
             </Box>
             <List dense>
-              {recentActivities.map((activity) => (
+              {activities.map((activity) => (
                 <React.Fragment key={activity.id}>
                   <ListItem>
                     <ListItemAvatar>
@@ -662,7 +799,7 @@ const Overview: React.FC = () => {
                       secondary={
                         <React.Fragment>
                           <Typography component="span" variant="body2" color="text.primary">
-                            {activity.action}
+                            {activity.content}
                           </Typography>
                           {` — ${activity.time}`}
                         </React.Fragment>
@@ -783,260 +920,137 @@ const Overview: React.FC = () => {
   // Performans İçeriği
   const PerformanceContent = () => (
     <>
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Aylık Talep Trendi</Typography>
-            </Box>
-            <Bar 
-              data={monthlyTicketData} 
-              options={{
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                  legend: {
-                    display: false
-                  },
-                  tooltip: {
-                    usePointStyle: true,
-                    backgroundColor: alpha(theme.palette.grey[900], 0.8),
-                    titleFont: {
-                      size: 12,
-                      weight: 'bold' as const
-                    },
-                    bodyFont: {
-                      size: 11
-                    },
-                    padding: 8,
-                    cornerRadius: 6
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: {
-                      display: true,
-                      color: alpha(theme.palette.grey[500], 0.15)
-                    },
-                    ticks: {
-                      font: {
-                        size: 10
-                      }
-                    }
-                  },
-                  x: {
-                    grid: {
-                      display: false
-                    },
-                    ticks: {
-                      font: {
-                        size: 10
-                      }
-                    }
-                  }
-                }
-              }} 
-            />
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6} lg={4}>
-          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Departman Dağılımı</Typography>
-            </Box>
-            <Box height={200} display="flex" justifyContent="center" alignItems="center">
-              <Doughnut 
-                data={departmentChartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'right',
-                      labels: {
-                        boxWidth: 10,
-                        usePointStyle: true,
-                        font: {
-                          size: 10,
-                        }
-                      }
-                    },
-                    tooltip: {
-                      usePointStyle: true,
-                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
-                      titleFont: {
-                        size: 12,
-                        weight: 'bold' as const
-                      },
-                      bodyFont: {
-                        size: 11
-                      },
-                      padding: 8,
-                      cornerRadius: 6
-                    }
-                  },
-                  cutout: '60%'
-                }} 
-              />
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Çözüm Oranı (Son 6 Ay)</Typography>
-              <SpeedIcon fontSize="small" color="action" />
-            </Box>
-            <Box height={240} display="flex" justifyContent="center" alignItems="center">
-              <Line 
-                data={resolutionRateData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'top',
-                      labels: {
-                        boxWidth: 10,
-                        usePointStyle: true,
-                        font: {
-                          size: 10,
-                        }
-                      }
-                    },
-                    tooltip: {
-                      usePointStyle: true,
-                      backgroundColor: alpha(theme.palette.grey[900], 0.8),
-                      titleFont: {
-                        size: 12,
-                        weight: 'bold' as const
-                      },
-                      bodyFont: {
-                        size: 11
-                      },
-                      padding: 8,
-                      cornerRadius: 6
-                    }
-                  },
-                  scales: {
-                    y: {
-                      min: 80,
-                      max: 100,
-                      ticks: {
-                        callback: function(value) {
-                          return value + '%';
-                        },
-                        font: {
-                          size: 10
-                        }
-                      },
-                      grid: {
-                        color: alpha(theme.palette.grey[500], 0.15)
-                      }
-                    },
-                    x: {
-                      grid: {
-                        display: false
-                      },
-                      ticks: {
-                        font: {
-                          size: 10
-                        }
-                      }
-                    }
-                  }
-                }} 
-              />
-            </Box>
-            <Box mt={2}>
-              <Typography variant="body2" color="info.main" display="flex" alignItems="center" fontSize="0.75rem">
-                <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />
-                Son 6 ayda çözüm oranı %11 arttı
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: '100%', borderRadius: 2, boxShadow: (theme) => theme.shadows[2] }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1" fontWeight="medium">Personel Performansı</Typography>
-              <BarChartIcon fontSize="small" color="action" />
-            </Box>
-            <Bar 
-              data={employeePerformanceData} 
-              options={{
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                  legend: {
-                    position: 'top',
-                    labels: {
-                      boxWidth: 10,
-                      usePointStyle: true,
-                      font: {
-                        size: 10,
-                      }
-                    }
-                  },
-                  tooltip: {
-                    usePointStyle: true,
-                    backgroundColor: alpha(theme.palette.grey[900], 0.8),
-                    titleFont: {
-                      size: 12,
-                      weight: 'bold' as const
-                    },
-                    bodyFont: {
-                      size: 11
-                    },
-                    padding: 8,
-                    cornerRadius: 6
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: {
-                      display: true,
-                      color: alpha(theme.palette.grey[500], 0.15)
-                    },
-                    ticks: {
-                      font: {
-                        size: 10
-                      }
-                    }
-                  },
-                  x: {
-                    grid: {
-                      display: false
-                    },
-                    ticks: {
-                      font: {
-                        size: 10
-                      }
-                    }
-                  }
-                }
-              }} 
-            />
-            <Box mt={2}>
-              <Typography variant="body2" color="success.main" display="flex" alignItems="center" fontSize="0.75rem">
-                <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />
-                Ayşe'nin performansı bu ay %23 arttı
-              </Typography>
-              <Box mt={1} display="flex" justifyContent="space-between">
-                <Typography variant="caption" color="text.secondary">
-                  Ortalama çözüm süresi: 5.4 saat
-                </Typography>
-                <Typography variant="caption" color="primary" sx={{ cursor: 'pointer' }}>
-                  Tüm personel raporları
-                </Typography>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Performans Ölçümleri</Typography>
+              <Box height={300}>
+                <PolarArea 
+                  data={performanceData} 
+                  options={performanceChartOptions}
+                />
               </Box>
-            </Box>
-          </Paper>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Aylık Özet</Typography>
+              <Box height={300}>
+                <Chart
+                  type="bar"
+                  data={monthlySummaryData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        title: {
+                          display: true,
+                          text: 'Bilet Sayısı'
+                        }
+                      },
+                      y1: {
+                        beginAtZero: true,
+                        position: 'right' as const,
+                        title: {
+                          display: true,
+                          text: 'Memnuniyet (%)'
+                        },
+                        grid: {
+                          drawOnChartArea: false
+                        }
+                      }
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+      
+      <Grid container spacing={3} sx={{ mt: 1 }}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Öncelik Dağılımı</Typography>
+              <Box height={270} display="flex" justifyContent="center" alignItems="center">
+                <Doughnut 
+                  data={priorityDistributionData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Personel Performansı</Typography>
+              <List dense>
+                {[
+                  {name: 'Ali Yıldız', score: 95, tickets: 48},
+                  {name: 'Zeynep Kaya', score: 92, tickets: 42},
+                  {name: 'Mehmet Demir', score: 89, tickets: 38},
+                  {name: 'Ayşe Öztürk', score: 85, tickets: 35},
+                  {name: 'Mustafa Şahin', score: 83, tickets: 30}
+                ].map((employee, index) => (
+                  <ListItem key={index}>
+                    <ListItemText 
+                      primary={employee.name} 
+                      secondary={`${employee.tickets} bilet çözüldü`} 
+                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                        {employee.score}%
+                      </Typography>
+                      <Box 
+                        sx={{ 
+                          bgcolor: employee.score > 90 ? 'success.main' : 
+                                   employee.score > 80 ? 'primary.main' : 'warning.main',
+                          height: 8,
+                          width: 100,
+                          borderRadius: 5,
+                          position: 'relative'
+                        }}
+                      >
+                        <Box 
+                          sx={{ 
+                            bgcolor: 'background.paper',
+                            height: '100%',
+                            width: `${100 - employee.score}%`,
+                            position: 'absolute',
+                            right: 0,
+                            borderTopRightRadius: 5,
+                            borderBottomRightRadius: 5
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </>

@@ -41,9 +41,10 @@ export interface Ticket {
   closedAt: string | null; // Kapatılmışsa ISO tarih formatı
   attachments?: string[]; // Ek dosya URL'leri
   metadata?: {
-    fromEmail?: string; // E-posta ile geldiyse gönderen adresi
-    toEmail?: string; // E-posta ile geldiyse alıcı adresi
-    isFromEmail?: boolean; // E-posta ile oluşturuldu mu
+    isFromEmail?: boolean;
+    fromEmail?: string;
+    toEmail?: string;
+    emailSubject?: string;
   };
 }
 
@@ -68,11 +69,6 @@ export interface CreateTicketRequest {
   category: TicketCategory;
   priority?: TicketPriority; // Öncelik belirtilmezse otomatik MEDIUM olur
   attachments?: string[];
-  metadata?: {
-    fromEmail?: string;
-    toEmail?: string;
-    isFromEmail?: boolean;
-  };
 }
 
 // Bilet güncelleme

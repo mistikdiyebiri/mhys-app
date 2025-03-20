@@ -7,8 +7,6 @@ import {
   Divider,
   Grid,
   Typography,
-  FormControlLabel,
-  Switch,
   TextField,
   Button,
   Chip,
@@ -16,7 +14,6 @@ import {
   IconButton
 } from '@mui/material';
 import {
-  Email as EmailIcon,
   Person as PersonIcon,
   Assignment as AssignmentIcon,
   AccessTime as AccessTimeIcon,
@@ -37,7 +34,6 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState('');
-  const [sendAsEmail, setSendAsEmail] = useState(false);
   
   // Ticket verilerini yükle
   useEffect(() => {
@@ -91,18 +87,12 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
       const employeeId = 'current-employee-id'; // Gerçek implementasyonda mevcut kullanıcı ID'sini alırsınız
       await ticketServiceInstance.addComment(ticketId, employeeId, replyText, false);
       
-      // Eğer e-posta olarak gönderilmesi isteniyorsa
-      if (sendAsEmail) {
-        await ticketServiceInstance.sendTicketReplyAsEmail(ticketId, replyText, employeeId);
-      }
-      
       // Yorumları yeniden yükle
       const updatedComments = await ticketServiceInstance.getTicketComments(ticketId);
       setComments(updatedComments);
       
       // Form alanını temizle
       setReplyText('');
-      setSendAsEmail(false);
     } catch (error) {
       console.error('Yanıt gönderilirken hata oluştu:', error);
     }
@@ -197,31 +187,6 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
         </CardContent>
       </Card>
       
-      {/* E-posta bilgileri varsa gösterilecek bölüm */}
-      {ticket.metadata?.isFromEmail && (
-        <Box mt={3}>
-          <Card variant="outlined">
-            <CardHeader 
-              title="E-posta Bilgileri" 
-              avatar={<EmailIcon color="primary" />}
-            />
-            <Divider />
-            <CardContent>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Gönderen E-posta:</Typography>
-                  <Typography variant="body1">{ticket.metadata?.fromEmail}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Alıcı E-posta:</Typography>
-                  <Typography variant="body1">{ticket.metadata?.toEmail}</Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Box>
-      )}
-      
       {/* Yorumlar */}
       <Box mt={3}>
         <Typography variant="h5" sx={{ mb: 2 }}>Yanıtlar</Typography>
@@ -241,16 +206,6 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
                 <Typography variant="body1">
                   {comment.text || comment.content}
                 </Typography>
-                
-                {comment.isEmailSent && (
-                  <Chip 
-                    icon={<EmailIcon />} 
-                    label="E-posta olarak gönderildi" 
-                    color="info" 
-                    size="small" 
-                    sx={{ mt: 1 }} 
-                  />
-                )}
               </CardContent>
             </Card>
           ))
@@ -270,22 +225,6 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
             />
-            
-            {/* Yorum ekleme formuna e-posta olarak yanıtlama seçeneği */}
-            {ticket.metadata?.isFromEmail && (
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={sendAsEmail}
-                    onChange={(e) => setSendAsEmail(e.target.checked)}
-                    name="sendAsEmail"
-                    color="primary"
-                  />
-                }
-                label="E-posta Olarak da Gönder"
-                sx={{ mt: 1 }}
-              />
-            )}
             
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
               <Button 
