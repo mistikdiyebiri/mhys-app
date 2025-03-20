@@ -66,14 +66,20 @@ class EmailService {
   /**
    * E-postaları kontrol eder ve yeni e-postaları destek talebi olarak açar
    */
-  private async checkEmails(): Promise<void> {
+  public async checkEmails(): Promise<void> {
+    console.log('checkEmails metodu çağrıldı.');
+    
     if (!this.activeEmailSettings) {
       console.error('E-posta kontrolü yapılamadı: Aktif e-posta ayarı bulunamadı.');
       return;
     }
     
     try {
-      console.log('Yeni e-postalar kontrol ediliyor...');
+      console.log('Yeni e-postalar kontrol ediliyor...', {
+        aktifEmail: this.activeEmailSettings?.email,
+        isActive: this.activeEmailSettings?.isActive,
+        createTickets: this.activeEmailSettings?.createTickets
+      });
       
       // Gerçek uygulamada burada IMAP ile e-postaları çekme işlemi yapılır
       // Örnek olarak simüle ediyoruz
@@ -83,7 +89,9 @@ class EmailService {
         console.log(`${emails.length} yeni e-posta bulundu. Destek taleplerine dönüştürülüyor...`);
         
         for (const email of emails) {
-          await this.createTicketFromEmail(email);
+          console.log('E-posta işleniyor:', email.subject);
+          const ticket = await this.createTicketFromEmail(email);
+          console.log('Oluşturulan ticket:', ticket ? ticket.id : 'Başarısız');
         }
       } else {
         console.log('Yeni e-posta bulunamadı.');
@@ -138,6 +146,8 @@ class EmailService {
    * E-postayı destek talebine dönüştürür
    */
   private async createTicketFromEmail(email: any): Promise<Ticket | null> {
+    console.log('createTicketFromEmail başladı, email:', email.subject);
+    
     if (!this.activeEmailSettings || !this.activeEmailSettings.createTickets) {
       console.log('Bu e-posta hesabı için otomatik destek talebi oluşturma devre dışı.');
       return null;
@@ -160,8 +170,13 @@ class EmailService {
         }
       };
       
+      console.log('Oluşturulacak ticket:', newTicket);
+      
       // Destek talebini oluştur
+      console.log('ticketService.createTicket çağrılıyor...');
       const ticket = await ticketService.createTicket(email.fromName || email.from, newTicket as any);
+      
+      console.log('ticketService.createTicket yanıtı:', ticket);
       
       if (ticket) {
         console.log(`E-posta başarıyla destek talebine dönüştürüldü. Talep ID: ${ticket.id}`);
@@ -172,6 +187,8 @@ class EmailService {
         }
         
         return ticket;
+      } else {
+        console.error('Ticket null olarak döndü.');
       }
       
       return null;

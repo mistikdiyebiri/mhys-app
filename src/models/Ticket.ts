@@ -69,6 +69,13 @@ export interface CreateTicketRequest {
   category: TicketCategory;
   priority?: TicketPriority; // Öncelik belirtilmezse otomatik MEDIUM olur
   attachments?: string[];
+  metadata?: {
+    isFromEmail?: boolean;
+    fromEmail?: string;
+    toEmail?: string;
+    emailSubject?: string;
+    [key: string]: any;
+  };
 }
 
 // Bilet güncelleme

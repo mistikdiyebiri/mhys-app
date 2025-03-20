@@ -183,11 +183,22 @@ const theme = createTheme({
 
 const App: React.FC = () => {
   useEffect(() => {
-    // E-posta izleme servisini başlat
-    console.log('EmailService başlatılıyor...');
-    emailService.startEmailPolling()
-      .then(() => console.log('E-posta izleme başlatıldı.'))
-      .catch(err => console.error('E-posta izleme başlatılırken hata oluştu:', err));
+    console.log('E-posta servisini başlatma denemesi yapılıyor...');
+    
+    setTimeout(() => {
+      console.log('E-posta servisi polling başlatılıyor...');
+      emailService.startEmailPolling()
+        .then(() => {
+          console.log('E-posta polling başarıyla başlatıldı!');
+          setTimeout(() => {
+            console.log('Ek e-posta kontrolü tetikleniyor...');
+            emailService.checkEmails();
+          }, 60000);
+        })
+        .catch(error => {
+          console.error('E-posta polling başlatılamadı:', error);
+        });
+    }, 5000);
   }, []);
 
   return (

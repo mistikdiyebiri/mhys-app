@@ -146,6 +146,8 @@ class TicketService {
 
   // Yeni bir bilet oluştur
   async createTicket(userId: string, request: CreateTicketRequest): Promise<Ticket> {
+    console.log('TicketService.createTicket çağrıldı:', { userId, request });
+    
     if (this.isProduction) {
       try {
         // AWS API Gateway üzerinden yeni bilet oluştur
@@ -180,16 +182,22 @@ class TicketService {
             description: request.description,
             status: TicketStatus.OPEN,
             priority: request.priority || TicketPriority.MEDIUM,
-            category: request.category,
+            category: request.category || TicketCategory.GENERAL,
             createdBy: userId,
             assignedTo: null,
             createdAt: now,
             updatedAt: now,
             closedAt: null,
-            attachments: request.attachments || []
+            attachments: request.attachments || [],
+            metadata: request.metadata || {}
           };
 
+          console.log('Yeni ticket oluşturuldu:', newTicket);
           this.tickets.push(newTicket);
+          
+          // Debug için tüm ticket listesini kontrol et
+          console.log('Ticket listesi güncellendi, yeni uzunluk:', this.tickets.length);
+          
           resolve({ ...newTicket });
         }, 500);
       });
