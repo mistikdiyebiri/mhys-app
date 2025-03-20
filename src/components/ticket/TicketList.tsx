@@ -28,9 +28,11 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  useTheme,
-  Drawer,
-  alpha
+  DialogContentText,
+  DialogActions,
+  Snackbar,
+  Alert,
+  Drawer
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -42,7 +44,9 @@ import {
   PriorityHigh as PriorityHighIcon,
   Reply as ReplyIcon,
   Close as CloseIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  DeleteOutline as DeleteIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ticketService from '../../services/TicketService';
@@ -178,12 +182,16 @@ interface TicketListProps {
   userId?: string;
   isCustomerView?: boolean;
   onTicketSelect?: (ticketId: string) => void;
+  showFilters?: boolean;
+  limitRows?: boolean;
 }
 
 const TicketList: React.FC<TicketListProps> = ({ 
   userId,
   isCustomerView = false,
-  onTicketSelect 
+  onTicketSelect,
+  showFilters = true,
+  limitRows = false
 }) => {
   const theme = useTheme();
   const { userRole } = useAuth();
@@ -200,6 +208,16 @@ const TicketList: React.FC<TicketListProps> = ({
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
   
   const navigate = useNavigate();
 
@@ -228,6 +246,7 @@ const TicketList: React.FC<TicketListProps> = ({
         setFilteredTickets(ticketData);
       } catch (error) {
         console.error('Biletler yüklenirken hata oluştu:', error);
+        showNotification('Destek talepleri yüklenirken bir hata oluştu.', 'error');
       } finally {
         setLoading(false);
       }
@@ -345,6 +364,7 @@ const TicketList: React.FC<TicketListProps> = ({
         setFilteredTickets(ticketData);
       } catch (error) {
         console.error('Biletler yeniden yüklenirken hata oluştu:', error);
+        showNotification('Destek talepleri yeniden yüklenirken bir hata oluştu.', 'error');
       } finally {
         setLoading(false);
       }
@@ -407,6 +427,41 @@ const TicketList: React.FC<TicketListProps> = ({
     }
     
     return {};
+  };
+
+  // Bildirim göster
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  // Bildirim kapat
+  const closeNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
+  // Tüm talepleri temizle
+  const handleClearAllTickets = async () => {
+    try {
+      setLoading(true);
+      const cleared = await ticketService.clearAllTickets();
+      if (cleared) {
+        setAllTickets([]);
+        setFilteredTickets([]);
+        setClearConfirmOpen(false);
+        showNotification('Tüm destek talepleri başarıyla temizlendi.', 'success');
+      } else {
+        showNotification('Destek talepleri temizlenemedi.', 'error');
+      }
+    } catch (error) {
+      console.error('Talepleri temizlerken hata oluştu:', error);
+      showNotification('Talepleri temizlerken bir hata oluştu.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -519,6 +574,36 @@ const TicketList: React.FC<TicketListProps> = ({
         </Stack>
       </Box>
 
+      {showFilters && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box>
+            {!isCustomerView && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setClearConfirmOpen(true)}
+                startIcon={<DeleteIcon />}
+                disabled={loading}
+              >
+                Tüm Talepleri Temizle
+              </Button>
+            )}
+          </Box>
+          
+          {!isCustomerView && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setClearConfirmOpen(true)}
+              startIcon={<DeleteIcon />}
+              disabled={loading}
+            >
+              Tüm Talepleri Temizle
+            </Button>
+          )}
+        </Box>
+      )}
+      
       <TabPanel value={tabValue} index={0}>
         <TableContent 
           tickets={paginatedTickets} 
@@ -573,6 +658,28 @@ const TicketList: React.FC<TicketListProps> = ({
         }
       />
       
+      {/* Temizleme onay dialog'u */}
+      <Dialog
+        open={clearConfirmOpen}
+        onClose={() => setClearConfirmOpen(false)}
+      >
+        <DialogTitle>Tüm Destek Taleplerini Temizle</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bu işlem tüm destek taleplerini ve yanıtları kalıcı olarak silecektir. Bu işlem geri alınamaz.
+            Devam etmek istediğinize emin misiniz?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearConfirmOpen(false)} color="primary">
+            İptal
+          </Button>
+          <Button onClick={handleClearAllTickets} color="error" variant="contained">
+            Tümünü Temizle
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
       {/* Sağ kenardan açılan bilet detay paneli */}
       <Drawer
         anchor="right"
@@ -597,6 +704,18 @@ const TicketList: React.FC<TicketListProps> = ({
           />
         )}
       </Drawer>
+      
+      {/* Bildirim */}
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

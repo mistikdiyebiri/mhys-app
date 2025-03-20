@@ -22,6 +22,8 @@ class TicketService {
   private tickets: Ticket[] = [];
   private comments: TicketComment[] = [];
   private apiName = 'tickets'; // Amplify API'deki API ismi
+  private readonly TICKETS_STORAGE_KEY = 'mhys_tickets';
+  private readonly COMMENTS_STORAGE_KEY = 'mhys_ticket_comments';
 
   private constructor() {
     this.apiGateway = null; // AWS API Gateway instance would be initialized here
@@ -30,16 +32,72 @@ class TicketService {
     
     console.log('TicketService başlatıldı, isProduction:', this.isProduction);
     
-    // Geliştirme modunda mock veriler kullan
+    // Geliştirme modunda localStorage veya mock veriler kullan
     if (!this.isProduction) {
       try {
-        this.tickets = createMockTickets();
-        this.comments = createMockTicketComments();
-        console.log('Mock veriler yüklendi, ticket sayısı:', this.tickets.length);
+        // Önce localStorage'dan kayıtlı verileri kontrol et
+        const savedTickets = window.localStorage.getItem(this.TICKETS_STORAGE_KEY);
+        const savedComments = window.localStorage.getItem(this.COMMENTS_STORAGE_KEY);
+        
+        if (savedTickets) {
+          this.tickets = JSON.parse(savedTickets);
+          console.log('Kaydedilmiş ticket verileri yüklendi, sayı:', this.tickets.length);
+        } else {
+          // Kayıtlı veri yoksa boş başlat
+          this.tickets = [];
+          console.log('Yeni ticket listesi oluşturuldu.');
+          // İlk yüklemede localStorage'a kaydet
+          this.saveToLocalStorage();
+        }
+        
+        if (savedComments) {
+          this.comments = JSON.parse(savedComments);
+          console.log('Kaydedilmiş yorum verileri yüklendi, sayı:', this.comments.length);
+        } else {
+          // Kayıtlı yorum yoksa boş başlat
+          this.comments = [];
+          console.log('Yeni yorum listesi oluşturuldu.');
+          this.saveToLocalStorage();
+        }
       } catch (error) {
-        console.error('Mock veri yüklenirken hata oluştu:', error);
+        console.error('Veri yüklenirken hata oluştu:', error);
+        // Hata durumunda boş başlat
+        this.tickets = [];
+        this.comments = [];
+        this.saveToLocalStorage();
       }
     }
+  }
+  
+  // Verileri localStorage'a kaydet
+  private saveToLocalStorage(): void {
+    if (!this.isProduction) {
+      try {
+        window.localStorage.setItem(this.TICKETS_STORAGE_KEY, JSON.stringify(this.tickets));
+        window.localStorage.setItem(this.COMMENTS_STORAGE_KEY, JSON.stringify(this.comments));
+        console.log('Ticket ve yorum verileri localStorage\'a kaydedildi.');
+      } catch (error) {
+        console.error('Veriler localStorage\'a kaydedilirken hata oluştu:', error);
+      }
+    }
+  }
+  
+  // Tüm ticket verilerini temizle
+  public clearAllTickets(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (this.isProduction) {
+        console.warn('Üretim ortamında tüm ticketları temizleme işlemi devre dışı bırakıldı.');
+        resolve(false);
+        return;
+      }
+      
+      // Geliştirme modunda verileri temizle
+      this.tickets = [];
+      this.comments = [];
+      this.saveToLocalStorage();
+      console.log('Tüm ticket ve yorum verileri temizlendi.');
+      resolve(true);
+    });
   }
 
   static getInstance(): TicketService {
