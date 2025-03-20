@@ -37,7 +37,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  Alert
+  Alert,
+  Snackbar
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -56,6 +57,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { Employee, Department } from '../../models/schema';
+import employeeService from '../../services/EmployeeService';
 
 const availablePermissions = [
   { id: 'view_tickets', name: 'Talepleri Görüntüleme' },
@@ -108,7 +110,20 @@ const Employees: React.FC = () => {
     phone: '',
     departmentId: '',
     role: 'agent',
-    permissions: [] as string[]
+    permissions: [] as string[],
+    password: '',
+    confirmPassword: ''
+  });
+
+  // Mesaj durumu
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info'
   });
 
   // Örnek veri - Gerçek uygulamada API'den alınır
@@ -197,13 +212,13 @@ const Employees: React.FC = () => {
     //   }
     // };
     
-    // Simüle edilmiş veri yükleme
+    // Çalışanları servisten yükle
     setLoading(true);
     setTimeout(() => {
-      setEmployees(sampleEmployees);
+      setEmployees(employeeService.getAllEmployees());
       setDepartments(sampleDepartments);
       setLoading(false);
-    }, 1000);
+    }, 500);
   }, []);
 
   // Form işleyicileri
@@ -285,7 +300,9 @@ const Employees: React.FC = () => {
         phone: employee.phone || '',
         departmentId: employee.departmentId || '',
         role: employee.role,
-        permissions: employee.permissions || []
+        permissions: employee.permissions || [],
+        password: '',
+        confirmPassword: ''
       });
     } else {
       // Yeni personel için varsayılan değerler
@@ -297,7 +314,9 @@ const Employees: React.FC = () => {
         phone: '',
         departmentId: '',
         role: defaultRole,
-        permissions: rolePermissions[defaultRole] || ['view_tickets']
+        permissions: rolePermissions[defaultRole] || ['view_tickets'],
+        password: '',
+        confirmPassword: ''
       });
     }
     
@@ -310,53 +329,73 @@ const Employees: React.FC = () => {
   };
 
   const handleSubmitEmployee = () => {
+    // Form doğrulama
     if (!formState.firstName || !formState.lastName || !formState.email) {
-      // Validation hatası gösterilmeli
+      showNotification('Ad, soyad ve e-posta alanları zorunludur.', 'error');
+      return;
+    }
+
+    if (!selectedEmployee && (!formState.password || formState.password.length < 6)) {
+      showNotification('Şifre en az 6 karakter olmalıdır.', 'error');
+      return;
+    }
+
+    if (!selectedEmployee && formState.password !== formState.confirmPassword) {
+      showNotification('Şifreler eşleşmiyor.', 'error');
       return;
     }
     
-    if (selectedEmployee) {
-      // Güncelleme modu
-      const updatedEmployee: Employee = {
-        ...selectedEmployee,
-        firstName: formState.firstName,
-        lastName: formState.lastName,
-        email: formState.email,
-        phone: formState.phone,
-        departmentId: formState.departmentId,
-        role: formState.role,
-        permissions: formState.permissions,
-        updatedAt: new Date().toISOString()
-      };
+    try {
+      if (selectedEmployee) {
+        // Güncelleme modu
+        const updatedEmployee = employeeService.updateEmployee(selectedEmployee.id, {
+          firstName: formState.firstName,
+          lastName: formState.lastName,
+          email: formState.email,
+          phone: formState.phone,
+          departmentId: formState.departmentId,
+          role: formState.role,
+          permissions: formState.permissions,
+        });
+        
+        if (updatedEmployee) {
+          setEmployees(employeeService.getAllEmployees());
+          showNotification('Personel başarıyla güncellendi.', 'success');
+        } else {
+          showNotification('Personel güncellenirken bir hata oluştu.', 'error');
+        }
+        
+        // Şifre değişikliği varsa uygula
+        if (formState.password && formState.password.length >= 6 && formState.password === formState.confirmPassword) {
+          employeeService.updateEmployeePassword(selectedEmployee.id, formState.password);
+          showNotification('Personel şifresi başarıyla güncellendi.', 'success');
+        }
+      } else {
+        // Yeni personel oluşturma modu
+        try {
+          const newEmployee = employeeService.createEmployee({
+            firstName: formState.firstName,
+            lastName: formState.lastName,
+            email: formState.email,
+            phone: formState.phone,
+            departmentId: formState.departmentId,
+            role: formState.role,
+            permissions: formState.permissions,
+          }, formState.password);
+          
+          setEmployees(employeeService.getAllEmployees());
+          showNotification(`${newEmployee.firstName} ${newEmployee.lastName} personeli başarıyla eklendi.`, 'success');
+        } catch (error) {
+          showNotification(`Hata: ${(error as Error).message}`, 'error');
+          return;
+        }
+      }
       
-      // Gerçek uygulamada: 
-      // await API.graphql(graphqlOperation(updateEmployee, { input: updatedEmployee }));
-      
-      // UI güncelleme
-      setEmployees(employees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
-    } else {
-      // Yeni personel oluşturma modu
-      const newEmployee: Employee = {
-        id: `emp-${Date.now()}`, // Gerçek uygulama: UUID veya otomatik ID
-        firstName: formState.firstName,
-        lastName: formState.lastName,
-        email: formState.email,
-        phone: formState.phone,
-        departmentId: formState.departmentId,
-        role: formState.role,
-        permissions: formState.permissions,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Gerçek uygulamada: 
-      // await API.graphql(graphqlOperation(createEmployee, { input: newEmployee }));
-      
-      // UI güncelleme
-      setEmployees([...employees, newEmployee]);
+      handleCloseEmployeeDialog();
+    } catch (error) {
+      console.error('Personel kaydedilirken hata:', error);
+      showNotification(`İşlem sırasında bir hata oluştu: ${(error as Error).message}`, 'error');
     }
-    
-    handleCloseEmployeeDialog();
   };
 
   const handleOpenDeleteConfirm = (employee: Employee) => {
@@ -372,21 +411,24 @@ const Employees: React.FC = () => {
   const handleDeleteEmployee = () => {
     if (!selectedEmployee) return;
     
-    // Gerçek uygulamada:
-    // await API.graphql(graphqlOperation(deleteEmployee, { input: { id: selectedEmployee.id } }));
+    const result = employeeService.deleteEmployee(selectedEmployee.id);
+    if (result) {
+      setEmployees(employeeService.getAllEmployees());
+      showNotification('Personel başarıyla silindi.', 'success');
+    } else {
+      showNotification('Personel silinirken bir hata oluştu.', 'error');
+    }
     
-    // UI güncelleme
-    setEmployees(employees.filter(emp => emp.id !== selectedEmployee.id));
     handleCloseDeleteConfirm();
   };
 
   const handleRefresh = () => {
     setLoading(true);
-    // Gerçek uygulamada API çağrısı yapılır
+    // Personelleri servisten yeniden yükle
     setTimeout(() => {
-      setEmployees(sampleEmployees);
+      setEmployees(employeeService.getAllEmployees());
       setLoading(false);
-    }, 1000);
+    }, 500);
   };
 
   // Filtre ve arama fonksiyonları
@@ -443,6 +485,20 @@ const Employees: React.FC = () => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Bildirim göster
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  // Bildirim kapat
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
   };
 
   return (
@@ -604,127 +660,143 @@ const Employees: React.FC = () => {
 
       {/* Personel Ekleme/Düzenleme Modal */}
       <Dialog open={openEmployeeDialog} onClose={handleCloseEmployeeDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedEmployee ? 'Personel Düzenle' : 'Yeni Personel Ekle'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Ad"
-                name="firstName"
-                variant="outlined"
-                value={formState.firstName}
-                onChange={handleTextChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Soyad"
-                name="lastName"
-                variant="outlined"
-                value={formState.lastName}
-                onChange={handleTextChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="E-posta"
-                name="email"
-                type="email"
-                variant="outlined"
-                value={formState.email}
-                onChange={handleTextChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Telefon"
-                name="phone"
-                variant="outlined"
-                value={formState.phone}
-                onChange={handleTextChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Departman</InputLabel>
-                <Select
-                  name="departmentId"
-                  value={formState.departmentId}
-                  onChange={handleSelectChange}
-                  label="Departman"
-                >
-                  <MenuItem value="">Departman Seçiniz</MenuItem>
-                  {departments.map(dept => (
-                    <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Rol</InputLabel>
-                <Select
-                  name="role"
-                  value={formState.role}
-                  onChange={handleSelectChange}
-                  label="Rol"
-                >
-                  {availableRoles.map(role => (
-                    <MenuItem key={role.id} value={role.id}>{role.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                İzinler
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
+        <DialogTitle>{selectedEmployee ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Ad"
+                  name="firstName"
+                  value={formState.firstName}
+                  onChange={handleTextChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Soyad"
+                  name="lastName"
+                  value={formState.lastName}
+                  onChange={handleTextChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="E-posta"
+                  name="email"
+                  type="email"
+                  value={formState.email}
+                  onChange={handleTextChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Telefon"
+                  name="phone"
+                  value={formState.phone}
+                  onChange={handleTextChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Departman</InputLabel>
+                  <Select
+                    name="departmentId"
+                    value={formState.departmentId}
+                    onChange={handleSelectChange}
+                    label="Departman"
+                  >
+                    <MenuItem value="">Seçiniz</MenuItem>
+                    {departments.map((dept) => (
+                      <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Rol</InputLabel>
+                  <Select
+                    name="role"
+                    value={formState.role}
+                    onChange={handleSelectChange}
+                    label="Rol"
+                  >
+                    {availableRoles.map((role) => (
+                      <MenuItem key={role.id} value={role.id}>{role.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
               
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  İzinler seçtiğiniz role göre otomatik olarak belirlendi. İsterseniz aşağıdan özel izinleri değiştirebilirsiniz.
+              {/* Şifre Alanları */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label={selectedEmployee ? "Yeni Şifre (Değişmeyecekse boş bırakın)" : "Şifre"}
+                  name="password"
+                  type="password"
+                  value={formState.password}
+                  onChange={handleTextChange}
+                  required={!selectedEmployee}
+                  helperText={!selectedEmployee ? "En az 6 karakter" : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label={selectedEmployee ? "Yeni Şifre Tekrar" : "Şifre Tekrar"}
+                  name="confirmPassword"
+                  type="password"
+                  value={formState.confirmPassword}
+                  onChange={handleTextChange}
+                  required={!selectedEmployee}
+                  error={formState.password !== formState.confirmPassword && formState.confirmPassword !== ''}
+                  helperText={formState.password !== formState.confirmPassword && formState.confirmPassword !== '' ? "Şifreler eşleşmiyor" : ""}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  İzinler
                 </Typography>
-              </Alert>
-              
-              <FormGroup>
-                <Grid container spacing={2}>
-                  {availablePermissions.map(permission => (
-                    <Grid item xs={12} sm={6} md={4} key={permission.id}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={formState.permissions.includes(permission.id)}
-                            onChange={() => handlePermissionChange(permission.id)}
-                          />
-                        }
-                        label={permission.name}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </FormGroup>
+                <Typography variant="body2" color="textSecondary" paragraph>
+                  Bu rol için {formState.role === 'admin' ? 'admin tüm izinlere sahiptir.' : 'gerekli izinleri seçin:'}
+                </Typography>
+                
+                <FormGroup>
+                  <Grid container spacing={1}>
+                    {availablePermissions.map((permission) => (
+                      <Grid item xs={12} sm={6} md={4} key={permission.id}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formState.permissions.includes(permission.id)}
+                              onChange={() => handlePermissionChange(permission.id)}
+                              disabled={formState.role === 'admin'} // Admin tüm izinlere sahip, değiştirilemez
+                            />
+                          }
+                          label={permission.name}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </FormGroup>
+              </Grid>
             </Grid>
-          </Grid>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseEmployeeDialog}>İptal</Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={handleSubmitEmployee}
-          >
-            {selectedEmployee ? 'Güncelle' : 'Kaydet'}
+          <Button variant="contained" color="primary" onClick={handleSubmitEmployee}>
+            {selectedEmployee ? 'Güncelle' : 'Ekle'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -748,6 +820,18 @@ const Employees: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Bildirim Snackbar */}
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
