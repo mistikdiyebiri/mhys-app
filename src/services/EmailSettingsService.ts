@@ -22,6 +22,7 @@ class EmailSettingsService {
   private emailSettings: EmailSettings[] = [];
   private readonly isProduction: boolean;
   private readonly apiName = 'emailapi'; // Amplify API'deki API ismi
+  private readonly STORAGE_KEY = 'mhys_email_settings';
   
   private constructor() {
     // Geliştirme modunda hiçbir zaman üretim API'lerini çağırmayalım
@@ -32,10 +33,36 @@ class EmailSettingsService {
     // Geliştirme modunda mock veriler kullan
     if (!this.isProduction) {
       try {
-        this.emailSettings = createMockEmailSettings();
-        console.log('Mock e-posta ayarları yüklendi, ayar sayısı:', this.emailSettings.length);
+        // Önce localStorage'dan kayıtlı verileri kontrol et
+        const savedSettings = localStorage.getItem(this.STORAGE_KEY);
+        
+        if (savedSettings) {
+          this.emailSettings = JSON.parse(savedSettings);
+          console.log('Kaydedilmiş e-posta ayarları yüklendi, ayar sayısı:', this.emailSettings.length);
+        } else {
+          // Kayıtlı veri yoksa mock verileri kullan
+          this.emailSettings = createMockEmailSettings();
+          console.log('Mock e-posta ayarları yüklendi, ayar sayısı:', this.emailSettings.length);
+          // İlk yüklemede localStorage'a kaydet
+          this.saveToLocalStorage();
+        }
       } catch (error) {
         console.error('Mock veri yüklenirken hata oluştu:', error);
+        // Hata durumunda yine de mock verileri yükle
+        this.emailSettings = createMockEmailSettings();
+        this.saveToLocalStorage();
+      }
+    }
+  }
+
+  // Verileri localStorage'a kaydet
+  private saveToLocalStorage(): void {
+    if (!this.isProduction) {
+      try {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.emailSettings));
+        console.log('E-posta ayarları localStorage\'a kaydedildi, ayar sayısı:', this.emailSettings.length);
+      } catch (error) {
+        console.error('E-posta ayarları localStorage\'a kaydedilirken hata oluştu:', error);
       }
     }
   }
@@ -165,6 +192,10 @@ class EmailSettingsService {
           }
 
           this.emailSettings.push(newSetting);
+          
+          // localStorage'a kaydet
+          this.saveToLocalStorage();
+          
           resolve({ ...newSetting });
         }, 500);
       });
@@ -219,6 +250,10 @@ class EmailSettingsService {
           };
 
           this.emailSettings[index] = updatedSetting;
+          
+          // localStorage'a kaydet
+          this.saveToLocalStorage();
+          
           resolve({ ...updatedSetting });
         }, 500);
       });
@@ -261,6 +296,10 @@ class EmailSettingsService {
           }
 
           this.emailSettings.splice(index, 1);
+          
+          // localStorage'a kaydet
+          this.saveToLocalStorage();
+          
           resolve(true);
         }, 500);
       });

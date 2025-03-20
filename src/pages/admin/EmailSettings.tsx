@@ -112,7 +112,7 @@ const EmailSettings: React.FC = () => {
 
   useEffect(() => {
     fetchEmailSettings();
-  }, []);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEmailSettings = async () => {
     setLoading(true);
