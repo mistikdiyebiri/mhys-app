@@ -24,7 +24,8 @@ class EmailSettingsService {
   private readonly apiName = 'emailapi'; // Amplify API'deki API ismi
   
   private constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
+    // Geliştirme modunda hiçbir zaman üretim API'lerini çağırmayalım
+    this.isProduction = false; // AWS Amplify API henüz yapılandırılmadığı için prodüksiyon modunu devre dışı bırak
     
     console.log('EmailSettingsService başlatıldı, isProduction:', this.isProduction);
     
@@ -50,9 +51,17 @@ class EmailSettingsService {
 
   // Yardımcı metot - API çağrısından JSON yanıt alma
   private async getJsonResponse<T>(apiCall: Promise<any>): Promise<ApiResponse<T>> {
-    const response = await apiCall;
-    const result = await response.body.json() as ApiResponse<T>;
-    return result;
+    try {
+      const response = await apiCall;
+      const result = await response.body.json() as ApiResponse<T>;
+      return result;
+    } catch (error) {
+      console.error('API yanıtı alınırken hata oluştu:', error);
+      return {
+        success: false,
+        message: `API hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
+      };
+    }
   }
 
   // Tüm e-posta ayarlarını getir
