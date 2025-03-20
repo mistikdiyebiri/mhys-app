@@ -411,24 +411,26 @@ const RolesManagement: React.FC = () => {
                   </PermissionGuard>
                   
                   {/* Sil butonu - doğrudan erişim */}
-                  <Tooltip title={role.isSystem ? "Sistem rolleri silinemez" : "Bu rolü sil"}>
-                    <span>
-                      <IconButton 
-                        color="error" 
-                        onClick={() => handleDeleteRole(role)}
-                        disabled={role.isSystem || (userRole !== 'admin' && role.id === 'admin')}
-                        sx={{ 
-                          opacity: role.isSystem ? 0.5 : 1,
-                          '&:hover': { 
-                            bgcolor: role.isSystem ? 'transparent' : 'error.light',
-                            '& svg': { color: role.isSystem ? 'inherit' : '#fff' }
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                  <PermissionGuard permission={PagePermission.ROLE_DELETE}>
+                    <Tooltip title={role.isSystem ? "Sistem rolleri silinemez" : "Bu rolü sil"}>
+                      <span>
+                        <IconButton 
+                          color="error" 
+                          onClick={() => handleDeleteRole(role)}
+                          disabled={role.isSystem || (userRole !== 'admin' && role.id === 'admin')}
+                          sx={{ 
+                            opacity: role.isSystem ? 0.5 : 1,
+                            '&:hover': { 
+                              bgcolor: role.isSystem ? 'transparent' : 'error.light',
+                              '& svg': { color: role.isSystem ? 'inherit' : '#fff' }
+                            }
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </PermissionGuard>
                 </TableCell>
               </TableRow>
             ))}
