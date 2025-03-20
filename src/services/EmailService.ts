@@ -117,27 +117,21 @@ class EmailService {
     // Örnek e-posta verisi
     const mockEmails = [
       {
-        id: 'email-1',
+        id: `email-${new Date().getTime()}`,
         from: 'musteri@firma.com',
         fromName: 'Ahmet Yılmaz',
         to: this.activeEmailSettings.email,
-        subject: 'Oturum açma sorunu yaşıyorum',
-        body: 'Merhaba,\n\nSistemde oturum açmaya çalışıyorum ancak şifremi girdiğimde hata alıyorum. Yardımcı olabilir misiniz?\n\nSaygılarımla,\nAhmet Yılmaz',
+        subject: `Oturum açma sorunu [${new Date().toLocaleTimeString()}]`,
+        body: `Merhaba,\n\nSistemde oturum açmaya çalışıyorum ancak şifremi girdiğimde hata alıyorum. Yardımcı olabilir misiniz?\n\nSaat: ${new Date().toLocaleTimeString()}\n\nSaygılarımla,\nAhmet Yılmaz`,
         date: new Date(),
         isRead: false
       }
     ];
     
     // Geliştirme modunda her zaman test e-postası döndürelim
-    const sendTestEmail = true; // Geliştirme için test e-postası her zaman gönderilsin
-    
-    if (sendTestEmail) {
-      console.log('Geliştirme modu: Test e-postası oluşturuldu');
-      return mockEmails;
-    } else {
-      console.log('Hiç e-posta bulunamadı');
-      return [];
-    }
+    // Üretim ortamında burada IMAP istemcisi kullanılacak
+    console.log('Geliştirme modu: Test e-postası oluşturuldu');
+    return mockEmails;
   }
 
   /**

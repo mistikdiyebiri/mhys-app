@@ -34,7 +34,7 @@ class EmailSettingsService {
     if (!this.isProduction) {
       try {
         // Önce localStorage'dan kayıtlı verileri kontrol et
-        const savedSettings = localStorage.getItem(this.STORAGE_KEY);
+        const savedSettings = window.localStorage.getItem(this.STORAGE_KEY);
         
         if (savedSettings) {
           this.emailSettings = JSON.parse(savedSettings);
@@ -59,7 +59,7 @@ class EmailSettingsService {
   private saveToLocalStorage(): void {
     if (!this.isProduction) {
       try {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.emailSettings));
+        window.localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.emailSettings));
         console.log('E-posta ayarları localStorage\'a kaydedildi, ayar sayısı:', this.emailSettings.length);
       } catch (error) {
         console.error('E-posta ayarları localStorage\'a kaydedilirken hata oluştu:', error);
