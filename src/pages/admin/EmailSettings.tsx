@@ -49,6 +49,7 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import emailSettingsService from '../../services/EmailSettingsService';
+import emailService from '../../services/EmailService';
 import { EmailSettings as EmailSettingsModel, EmailServiceType, defaultEmailServerConfigs } from '../../models/Email';
 
 type FormDataType = {
@@ -80,6 +81,7 @@ const EmailSettings: React.FC = () => {
   const [openTestDialog, setOpenTestDialog] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [pollingStatus, setPollingStatus] = useState({ running: false, lastChecked: null as string | null });
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -302,6 +304,27 @@ const EmailSettings: React.FC = () => {
     }
   };
 
+  const handleStartEmailPolling = async () => {
+    try {
+      setLoading(true);
+      showNotification('E-posta izleme başlatılıyor...', 'info');
+      
+      await emailService.startEmailPolling();
+      
+      setPollingStatus({
+        running: true,
+        lastChecked: new Date().toLocaleTimeString()
+      });
+      
+      showNotification('E-posta izleme başlatıldı!', 'success');
+    } catch (error) {
+      console.error('E-posta izleme başlatılırken hata oluştu:', error);
+      showNotification('E-posta izleme başlatılırken hata oluştu.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
     setNotification({
       open: true,
@@ -320,15 +343,34 @@ const EmailSettings: React.FC = () => {
         <Typography variant="h5" component="h1" gutterBottom>
           E-posta Ayarları
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Yeni E-posta Hesabı
-        </Button>
+        <Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<RefreshIcon />}
+            onClick={handleStartEmailPolling}
+            disabled={loading}
+            sx={{ mr: 2 }}
+          >
+            E-posta İzlemeyi Başlat
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            disabled={loading}
+          >
+            Yeni E-posta Hesabı
+          </Button>
+        </Box>
       </Box>
+
+      {pollingStatus.running && pollingStatus.lastChecked && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          E-posta izleme aktif! Son kontrol: {pollingStatus.lastChecked}
+        </Alert>
+      )}
 
       {emailSettings.length === 0 && !loading ? (
         <Card>

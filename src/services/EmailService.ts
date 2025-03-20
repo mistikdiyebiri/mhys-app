@@ -98,12 +98,21 @@ class EmailService {
    */
   private async fetchEmailsFromYandex(): Promise<any[]> {
     if (!this.activeEmailSettings) {
+      console.log('E-posta kontrol edilemiyor: activeEmailSettings null');
       return [];
     }
     
     // Bu fonksiyon gerçek bir IMAP istemcisi ile Yandex'ten e-postaları çeker
     // Örnek implementasyon için sahte veri döndürüyoruz
     // Gerçek uygulamada "node-imap" veya "imapflow" gibi kütüphaneler kullanılabilir
+    
+    console.log('Yandex mail kontrol ediliyor...', {
+      email: this.activeEmailSettings.email,
+      server: this.activeEmailSettings.incomingServer,
+      port: this.activeEmailSettings.incomingPort,
+      username: this.activeEmailSettings.username,
+      ssl: this.activeEmailSettings.enableSSL
+    });
     
     // Örnek e-posta verisi
     const mockEmails = [
@@ -119,8 +128,16 @@ class EmailService {
       }
     ];
     
-    // Gerçek uygulamada IMAP ile okunmamış e-postaları çekme işlemi yapılır
-    return Math.random() > 0.7 ? mockEmails : []; // Demo amaçlı rastgele e-posta döndürüyoruz
+    // Geliştirme modunda her zaman test e-postası döndürelim
+    const sendTestEmail = true; // Geliştirme için test e-postası her zaman gönderilsin
+    
+    if (sendTestEmail) {
+      console.log('Geliştirme modu: Test e-postası oluşturuldu');
+      return mockEmails;
+    } else {
+      console.log('Hiç e-posta bulunamadı');
+      return [];
+    }
   }
 
   /**

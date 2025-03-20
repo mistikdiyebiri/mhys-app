@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,6 +9,9 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+
+// Servisler
+import emailService from "./services/EmailService";
 
 // Sayfalar
 import CustomerLogin from "./pages/customer/Login";
@@ -179,6 +182,14 @@ const theme = createTheme({
 });
 
 const App: React.FC = () => {
+  useEffect(() => {
+    // E-posta izleme servisini başlat
+    console.log('EmailService başlatılıyor...');
+    emailService.startEmailPolling()
+      .then(() => console.log('E-posta izleme başlatıldı.'))
+      .catch(err => console.error('E-posta izleme başlatılırken hata oluştu:', err));
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
