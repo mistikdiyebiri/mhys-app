@@ -34,6 +34,8 @@ import {
   Alert,
   Drawer
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 import { 
   Search as SearchIcon,
   FilterList as FilterListIcon,
