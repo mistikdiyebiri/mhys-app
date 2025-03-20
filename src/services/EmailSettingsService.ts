@@ -7,7 +7,7 @@ import {
 import { post, get, put, del } from 'aws-amplify/api';
 
 // API yanıt tipleri
-interface ApiResponse<T> {
+interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   data?: T;
@@ -49,9 +49,9 @@ class EmailSettingsService {
   }
 
   // Yardımcı metot - API çağrısından JSON yanıt alma
-  private async getJsonResponse<T>(apiCall: Promise<any>): Promise<T> {
+  private async getJsonResponse<T>(apiCall: Promise<any>): Promise<ApiResponse<T>> {
     const response = await apiCall;
-    const result = await response.body.json() as T;
+    const result = await response.body.json() as ApiResponse<T>;
     return result;
   }
 
@@ -65,7 +65,7 @@ class EmailSettingsService {
           path: '/settings'
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<EmailSettings[]>(apiCall);
         
         console.log('E-posta ayarları API yanıtı:', responseData);
         return responseData?.settings || [];
@@ -93,7 +93,7 @@ class EmailSettingsService {
           path: `/settings/${id}`
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<EmailSettings>(apiCall);
         
         console.log(`${id} ID'li e-posta ayarı API yanıtı:`, responseData);
         return responseData?.setting || null;
@@ -125,7 +125,7 @@ class EmailSettingsService {
           }
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<EmailSettings>(apiCall);
         
         console.log('E-posta ayarı oluşturma API yanıtı:', responseData);
         if (!responseData?.setting) {
@@ -175,7 +175,7 @@ class EmailSettingsService {
           }
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<EmailSettings>(apiCall);
         
         console.log('E-posta ayarı güncelleme API yanıtı:', responseData);
         return responseData?.setting || null;
@@ -226,7 +226,7 @@ class EmailSettingsService {
           path: `/settings/${id}`
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<void>(apiCall);
         
         console.log('E-posta ayarı silme API yanıtı:', responseData);
         return responseData.success || false;
@@ -271,7 +271,7 @@ class EmailSettingsService {
           }
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<{ success: boolean; message: string }>(apiCall);
         
         console.log('E-posta ayarı test API yanıtı:', responseData);
         return {
@@ -328,7 +328,7 @@ class EmailSettingsService {
           path: '/settings/default'
         }).response;
         
-        const responseData = await this.getJsonResponse<ApiResponse>(apiCall);
+        const responseData = await this.getJsonResponse<EmailSettings>(apiCall);
         
         console.log('Varsayılan e-posta ayarı API yanıtı:', responseData);
         return responseData?.setting || null;
